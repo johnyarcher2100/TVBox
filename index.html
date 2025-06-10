@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Abuji IPTV 播放器 - 支援多種串流格式的高品質播放器" />
+    <title>Abuji IPTV 播放器</title>
+    <!-- 載入 HLS.js 用於 HLS 格式支援 -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" crossorigin="anonymous"></script>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100vh;
+        width: 100vw;
+      }
+      #root {
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+      }
+      /* 播放器容器樣式 */
+      .easy-player-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      .easy-player-container video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- 載入 EasyPlayer Pro -->
+    <script src="/js/EasyPlayer-pro.js" crossorigin="anonymous"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html> 
