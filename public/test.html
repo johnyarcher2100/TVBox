@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TVBox 部署測試</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 40px; 
+            background: #111827; 
+            color: white; 
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .success { background: #065f46; }
+        .error { background: #7f1d1d; }
+        .warning { background: #92400e; }
+        pre { 
+            background: #1f2937; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 TVBox 部署狀態檢查</h1>
+    
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(name, status, message, details = '') {
+            const div = document.createElement('div');
+            div.className = `status ${status}`;
+            div.innerHTML = `
+                <h3>${status === 'success' ? '✅' : status === 'error' ? '❌' : '⚠️'} ${name}</h3>
+                <p>${message}</p>
+                ${details ? `<pre>${details}</pre>` : ''}
+            `;
+            results.appendChild(div);
+        }
+        
+        // 測試基本環境
+        addResult('基本環境', 'success', '靜態檔案載入正常');
+        
+        // 測試路徑
+        addResult('當前路徑', 'success', `路徑: ${window.location.href}`);
+        
+        // 測試 HLS.js
+        const hlsScript = document.createElement('script');
+        hlsScript.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+        hlsScript.onload = () => {
+            if (typeof Hls !== 'undefined') {
+                addResult('HLS.js', 'success', `HLS.js 載入成功 (版本: ${Hls.version})`);
+            } else {
+                addResult('HLS.js', 'error', 'HLS.js 載入失敗');
+            }
+        };
+        hlsScript.onerror = () => {
+            addResult('HLS.js', 'error', 'HLS.js 載入失敗');
+        };
+        document.head.appendChild(hlsScript);
+        
+        // 測試 EasyPlayer
+        const easyPlayerScript = document.createElement('script');
+        easyPlayerScript.src = '/js/EasyPlayer-pro.js';
+        easyPlayerScript.onload = () => {
+            if (typeof EasyPlayerPro !== 'undefined') {
+                addResult('EasyPlayer Pro', 'success', 'EasyPlayer Pro 載入成功');
+            } else {
+                addResult('EasyPlayer Pro', 'warning', 'EasyPlayer Pro 載入但未定義');
+            }
+        };
+        easyPlayerScript.onerror = () => {
+            addResult('EasyPlayer Pro', 'warning', 'EasyPlayer Pro 載入失敗（將使用後備播放器）');
+        };
+        document.head.appendChild(easyPlayerScript);
+        
+        // 測試主應用程式
+        fetch('/assets/')
+            .then(response => {
+                if (response.ok) {
+                    addResult('Assets 資源', 'success', 'Assets 目錄可訪問');
+                } else {
+                    addResult('Assets 資源', 'warning', `Assets 訪問狀態: ${response.status}`);
+                }
+            })
+            .catch(error => {
+                addResult('Assets 資源', 'error', 'Assets 目錄訪問失敗', error.message);
+            });
+        
+        // 瀏覽器資訊
+        addResult('瀏覽器資訊', 'success', 
+            `用戶代理: ${navigator.userAgent}`,
+            `視窗大小: ${window.innerWidth}x${window.innerHeight}\n時區: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`
+        );
+        
+        // 時間戳
+        addResult('檢查時間', 'success', new Date().toLocaleString('zh-TW'));
+    </script>
+</body>
+</html> 

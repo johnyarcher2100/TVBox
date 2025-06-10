@@ -2,7 +2,7 @@
 <html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="description" content="Abuji IPTV 播放器 - 支援多種串流格式的高品質播放器" />
     <title>Abuji IPTV 播放器</title>
@@ -46,18 +46,59 @@
       @keyframes spin {
         to { transform: rotate(360deg); }
       }
+      /* 錯誤顯示 */
+      .error-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc2626;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 1000;
+        max-width: 300px;
+      }
     </style>
-    <script type="module" crossorigin src="./assets/index-C1MJg8t9.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/vendor-CXRzbg6S.js">
-    <link rel="modulepreload" crossorigin href="./assets/router-CEv6Rmll.js">
-    <link rel="modulepreload" crossorigin href="./assets/store-D_AdnfCK.js">
-    <link rel="modulepreload" crossorigin href="./assets/supabase-bl5tqpak.js">
-    <link rel="modulepreload" crossorigin href="./assets/ui-MMCq9UMg.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-BT985ra1.css">
+    <script type="module" crossorigin src="/assets/index-DB5d4XIl.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-CXRzbg6S.js">
+    <link rel="modulepreload" crossorigin href="/assets/router-CEv6Rmll.js">
+    <link rel="modulepreload" crossorigin href="/assets/store-D_AdnfCK.js">
+    <link rel="modulepreload" crossorigin href="/assets/supabase-BIuTZVgf.js">
+    <link rel="modulepreload" crossorigin href="/assets/ui-MMCq9UMg.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BT985ra1.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #111827; color: white;">
+        <div style="text-align: center;">
+          <div class="loading-spinner" style="margin-bottom: 16px;"></div>
+          <p>載入中...</p>
+        </div>
+      </div>
+    </div>
     <!-- 載入 EasyPlayer Pro -->
-    <script src="./js/EasyPlayer-pro.js" crossorigin="anonymous" onerror="console.warn('EasyPlayer Pro 載入失敗，將使用後備播放器')"></script>
+    <script src="/js/EasyPlayer-pro.js" crossorigin="anonymous" onerror="console.warn('EasyPlayer Pro 載入失敗，將使用後備播放器')"></script>
+    
+    <!-- 錯誤處理腳本 -->
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error);
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = '載入錯誤: ' + (e.error?.message || e.message);
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 5000);
+      });
+      
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled promise rejection:', e.reason);
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = 'Promise 錯誤: ' + (e.reason?.message || e.reason);
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 5000);
+      });
+    </script>
   </body>
 </html> 
