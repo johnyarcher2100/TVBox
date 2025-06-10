@@ -30,7 +30,8 @@
       .easy-player-container video {
         width: 100% !important;
         height: 100% !important;
-        object-fit: contain;
+        -o-object-fit: contain;
+           object-fit: contain;
       }
       /* 載入動畫 */
       .loading-spinner {
@@ -46,11 +47,17 @@
         to { transform: rotate(360deg); }
       }
     </style>
+    <script type="module" crossorigin src="./assets/index-C1MJg8t9.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/vendor-CXRzbg6S.js">
+    <link rel="modulepreload" crossorigin href="./assets/router-CEv6Rmll.js">
+    <link rel="modulepreload" crossorigin href="./assets/store-D_AdnfCK.js">
+    <link rel="modulepreload" crossorigin href="./assets/supabase-bl5tqpak.js">
+    <link rel="modulepreload" crossorigin href="./assets/ui-MMCq9UMg.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-BT985ra1.css">
   </head>
   <body>
     <div id="root"></div>
     <!-- 載入 EasyPlayer Pro -->
     <script src="./js/EasyPlayer-pro.js" crossorigin="anonymous" onerror="console.warn('EasyPlayer Pro 載入失敗，將使用後備播放器')"></script>
-    <script type="module" src="./src/main.tsx"></script>
   </body>
 </html> 

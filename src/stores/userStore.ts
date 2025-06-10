@@ -5,7 +5,7 @@ import type { User, UserStore } from '@/types'
 
 export const useUserStore = create<UserStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isAuthenticated: false,
 

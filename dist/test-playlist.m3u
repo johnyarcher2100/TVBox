@@ -1,0 +1,25 @@
+#EXTM3U
+
+#EXTINF:-1 tvg-id="test1" tvg-name="Big Buck Bunny MP4" tvg-logo="" group-title="測試影片",Big Buck Bunny (MP4)
+https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4
+
+#EXTINF:-1 tvg-id="test2" tvg-name="Sintel MP4" tvg-logo="" group-title="測試影片",Sintel (MP4)
+https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4
+
+#EXTINF:-1 tvg-id="test3" tvg-name="HLS 測試" tvg-logo="" group-title="HLS 直播",HLS 測試串流
+https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8
+
+#EXTINF:-1 tvg-id="test4" tvg-name="Apple HLS 範例" tvg-logo="" group-title="HLS 直播",Apple HLS 範例
+https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8
+
+#EXTINF:-1 tvg-id="test5" tvg-name="Tears of Steel" tvg-logo="" group-title="測試影片",Tears of Steel (MP4)
+https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4
+
+#EXTINF:-1 tvg-id="test6" tvg-name="Elephant Dream" tvg-logo="" group-title="測試影片",Elephant Dream (MP4)
+https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4
+
+#EXTINF:-1 tvg-id="test7" tvg-name="WebM 測試" tvg-logo="" group-title="WebM",WebM 格式測試
+https://sample-videos.com/zip/10/webm/720/SampleVideo_720x480_1mb.webm
+
+#EXTINF:-1 tvg-id="test8" tvg-name="DASH 測試" tvg-logo="" group-title="DASH",DASH 自適應串流
+https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd 

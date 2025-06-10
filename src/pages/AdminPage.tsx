@@ -1,81 +1,76 @@
-import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Edit, Trash2, Send, Clock, Users } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
+import { useUserStore } from '@/stores/userStore'
 
-interface NotificationForm {
-  content: string
-  type: 'text' | 'image'
-  target_levels: number[]
-  is_global: boolean
-  schedule_time?: string
-  interval_seconds?: number
-  image_url?: string
-}
-
-const AdminPage: React.FC = () => {
+const AdminPage = () => {
   const navigate = useNavigate()
-  
-  const [notifications, setNotifications] = useState<any[]>([])
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [editingNotification, setEditingNotification] = useState<any>(null)
-  
-  const [form, setForm] = useState<NotificationForm>({
-    content: '',
-    type: 'text',
-    target_levels: [1],
-    is_global: true,
-    schedule_time: '',
-    interval_seconds: 30,
-    image_url: ''
-  })
+  const { user } = useUserStore()
 
-  const resetForm = () => {
-    setForm({
-      content: '',
-      type: 'text',
-      target_levels: [1],
-      is_global: true,
-      schedule_time: '',
-      interval_seconds: 30,
-      image_url: ''
-    })
-    setEditingNotification(null)
-    setShowCreateForm(false)
+  const handleLogout = () => {
+    useUserStore.getState().logout()
+    navigate('/')
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
-      <header className="bg-gray-800 border-b border-gray-700 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="text-white hover:text-gray-300 transition-colors"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold text-white">管理面板</h1>
-              <p className="text-sm text-gray-400">推播通知管理</p>
-            </div>
-          </div>
-          
+    <div className="h-screen bg-gray-900 text-white overflow-hidden">
+      {/* Header */}
+      <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6">
+        <div className="flex items-center gap-4">
           <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            onClick={() => navigate('/')}
+            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
           >
-            <Plus size={16} />
-            新增通知
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-xl font-bold">系統管理</h1>
+        </div>
+        
+                 <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-300">
+            歡迎，用戶 #{user?.id.slice(-6)} (管理員)
+          </span>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-sm"
+          >
+            登出
           </button>
         </div>
-      </header>
+      </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">管理功能開發中...</div>
-          <p className="text-gray-500 text-sm">
-            推播通知管理系統將在後續版本中完成
-          </p>
+      {/* Main Content */}
+      <div className="h-[calc(100vh-4rem)] flex">
+        {/* Sidebar */}
+        <div className="w-64 bg-gray-800 border-r border-gray-700 p-4">
+          <nav className="space-y-2">
+            <button className="w-full text-left px-4 py-2 bg-blue-600 rounded-lg">
+              通知管理
+            </button>
+            <button className="w-full text-left px-4 py-2 hover:bg-gray-700 rounded-lg">
+              用戶管理
+            </button>
+            <button className="w-full text-left px-4 py-2 hover:bg-gray-700 rounded-lg">
+              系統設定
+            </button>
+          </nav>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">通知管理</h2>
+            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+              <Plus className="w-4 h-4" />
+              新增通知
+            </button>
+          </div>
+
+          {/* Notifications List */}
+          <div className="bg-gray-800 rounded-lg p-6">
+            <div className="text-center text-gray-400 py-8">
+              暫無通知記錄
+            </div>
+          </div>
         </div>
       </div>
     </div>

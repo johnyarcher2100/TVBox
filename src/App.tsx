@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import PlayerPage from './pages/PlayerPage' 
 import AdminPage from './pages/AdminPage'
+import DiagnosticPage from './pages/DiagnosticPage'
 import LoginModal from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 
@@ -44,6 +44,10 @@ function App() {
                 <Navigate to="/" replace />
               )
             } 
+          />
+          <Route 
+            path="/diagnostic" 
+            element={<DiagnosticPage />} 
           />
         </Routes>
       </Router>

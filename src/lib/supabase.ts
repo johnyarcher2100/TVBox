@@ -239,7 +239,7 @@ export const dbHelpers = {
     try {
       // 測試 1: 基本連線測試
       console.log('📡 測試基本連線...')
-      const { data: healthCheck, error: healthError } = await supabase
+      const { error: healthError } = await supabase
         .from('channels')
         .select('count(*)')
         .limit(1)

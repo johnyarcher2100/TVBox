@@ -1,0 +1,8 @@
+# Netlify redirects for SPA
+/*    /index.html   200
+
+# Cache static assets
+/assets/*  /assets/:splat  200  Cache-Control: public, max-age=31536000, immutable
+
+# API routes (if needed later)
+/api/*  /.netlify/functions/:splat  200 

@@ -316,7 +316,7 @@ const PlayerPage: React.FC = () => {
         })
       })
       
-      hls.on((window as any).Hls.Events.ERROR, (event: any, data: any) => {
+      hls.on((window as any).Hls.Events.ERROR, (_event: any, data: any) => {
         console.error('HLS 播放錯誤:', data)
         if (data.fatal) {
           setError('HLS 串流播放失敗，請嘗試其他頻道')
