@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增強播放器測試</title>
+    
+    <!-- 載入所有播放器庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vlc.js@latest/dist/vlc.min.js" onerror="console.warn('VLC.js 載入失敗')"></script>
+    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.js"></script>
+    <script src="/js/EasyPlayer-pro.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .player-container {
+            background: black;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            height: 400px;
+            position: relative;
+        }
+        .info-panel {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .test-link {
+            background: #3a3a3a;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .test-link:hover {
+            background: #4a4a4a;
+        }
+        .decoder-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .capabilities {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .capability {
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .available {
+            background: #16a34a;
+        }
+        .unavailable {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Abuji IPTV 增強播放器測試</h1>
+        
+        <!-- 播放器能力檢測 -->
+        <div class="info-panel">
+            <h3>📊 播放器能力檢測</h3>
+            <div class="capabilities" id="capabilities"></div>
+        </div>
+        
+        <!-- 測試連結 -->
+        <div class="info-panel">
+            <h3>🔗 測試媒體連結</h3>
+            <div class="test-links">
+                <div class="test-link" onclick="testUrl('https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8')">
+                    <strong>HLS 測試</strong><br>
+                    <small>H.264 + AAC</small>
+                </div>
+                <div class="test-link" onclick="testUrl('http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4')">
+                    <strong>MP4 測試</strong><br>
+                    <small>H.264 點播</small>
+                </div>
+                <div class="test-link" onclick="testUrl('https://vjs.zencdn.net/v/oceans.webm')">
+                    <strong>WebM 測試</strong><br>
+                    <small>VP8 + Vorbis</small>
+                </div>
+                <div class="test-link" onclick="testUrl('https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8')">
+                    <strong>HLS 自適應</strong><br>
+                    <small>多品質流</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 播放器容器 -->
+        <div class="player-container" id="playerContainer">
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                點擊上方測試連結開始播放
+            </div>
+        </div>
+        
+        <!-- 當前解碼器信息 -->
+        <div class="info-panel">
+            <h3>🔧 當前狀態</h3>
+            <div id="status">等待測試...</div>
+        </div>
+        
+        <!-- 日誌輸出 -->
+        <div class="info-panel">
+            <h3>📝 測試日誌</h3>
+            <div id="logs" style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #1a1a1a; padding: 10px; border-radius: 4px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentPlayer = null;
+        let currentDecoder = 'none';
+        let supportedDecoders = [];
+        
+        // 日誌函數
+        function log(message, type = 'info') {
+            const logsEl = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#74c0fc';
+            logsEl.innerHTML += `<div style="color: ${color};">[${time}] ${message}</div>`;
+            logsEl.scrollTop = logsEl.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        // 檢測播放器能力
+        function detectCapabilities() {
+            const capabilities = {
+                'libvlc': typeof window.VLC !== 'undefined' || typeof window.vlc !== 'undefined',
+                'easyplayer': typeof window.EasyPlayerPro !== 'undefined',
+                'videojs': typeof window.videojs !== 'undefined',
+                'dplayer': typeof window.DPlayer !== 'undefined',
+                'flvjs': typeof window.flvjs !== 'undefined',
+                'mpegts': typeof window.mpegts !== 'undefined',
+                'hls': typeof window.Hls !== 'undefined',
+                'webcodec': 'VideoDecoder' in window && 'VideoEncoder' in window,
+                'mse': 'MediaSource' in window,
+                'native': true
+            };
+            
+            supportedDecoders = Object.keys(capabilities).filter(key => capabilities[key]);
+            
+            const capabilitiesEl = document.getElementById('capabilities');
+            Object.entries(capabilities).forEach(([name, available]) => {
+                const div = document.createElement('div');
+                div.className = `capability ${available ? 'available' : 'unavailable'}`;
+                div.textContent = `${name}: ${available ? '✅' : '❌'}`;
+                capabilitiesEl.appendChild(div);
+            });
+            
+            log(`檢測到 ${supportedDecoders.length} 個可用解碼器: ${supportedDecoders.join(', ')}`);
+            return capabilities;
+        }
+        
+        // 更新狀態
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = message;
+        }
+        
+        // 清理當前播放器
+        function cleanup() {
+            if (currentPlayer) {
+                try {
+                    if (currentDecoder === 'hls' && currentPlayer.destroy) {
+                        currentPlayer.destroy();
+                    } else if (currentDecoder === 'videojs' && currentPlayer.dispose) {
+                        currentPlayer.dispose();
+                    } else if (currentDecoder === 'easyplayer' && currentPlayer.destroy) {
+                        currentPlayer.destroy();
+                    } else if (currentDecoder === 'flvjs' && currentPlayer.destroy) {
+                        currentPlayer.destroy();
+                    }
+                } catch (e) {
+                    log(`清理播放器時出錯: ${e.message}`, 'error');
+                }
+                currentPlayer = null;
+            }
+            
+            // 清空容器
+            const container = document.getElementById('playerContainer');
+            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">準備播放...</div>';
+        }
+        
+        // 檢測媒體格式
+        function detectMediaFormat(url) {
+            const urlLower = url.toLowerCase();
+            return {
+                isHLS: urlLower.includes('.m3u8'),
+                isMP4: urlLower.includes('.mp4'),
+                isWebM: urlLower.includes('.webm'),
+                isFLV: urlLower.includes('.flv'),
+                isTS: urlLower.includes('.ts'),
+                isLive: urlLower.includes('.m3u8') || urlLower.includes('.flv') || urlLower.includes('/live/')
+            };
+        }
+        
+        // HLS.js 播放器
+        function initHLS(url) {
+            return new Promise((resolve, reject) => {
+                if (!window.Hls) {
+                    reject(new Error('HLS.js 不可用'));
+                    return;
+                }
+                
+                const container = document.getElementById('playerContainer');
+                container.innerHTML = '<video controls style="width: 100%; height: 100%;"></video>';
+                const video = container.querySelector('video');
+                
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        log('HLS manifest 解析完成', 'success');
+                        video.play();
+                        resolve(hls);
+                    });
+                    
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        log(`HLS 錯誤: ${data.details}`, 'error');
+                        if (data.fatal) reject(new Error(data.details));
+                    });
+                } else {
+                    reject(new Error('HLS 不支援'));
+                }
+            });
+        }
+        
+        // Video.js 播放器
+        function initVideoJS(url) {
+            return new Promise((resolve, reject) => {
+                if (!window.videojs) {
+                    reject(new Error('Video.js 不可用'));
+                    return;
+                }
+                
+                const container = document.getElementById('playerContainer');
+                container.innerHTML = '<video id="test-video" class="video-js" controls style="width: 100%; height: 100%;"></video>';
+                
+                const player = videojs('test-video', {
+                    controls: true,
+                    fluid: true,
+                    responsive: true
+                });
+                
+                player.ready(() => {
+                    player.src({ src: url, type: 'video/mp4' });
+                    player.on('loadedmetadata', () => {
+                        log('Video.js 載入完成', 'success');
+                        resolve(player);
+                    });
+                    player.on('error', (error) => {
+                        log(`Video.js 錯誤: ${error}`, 'error');
+                        reject(new Error('Video.js 播放失敗'));
+                    });
+                });
+            });
+        }
+        
+        // 原生播放器
+        function initNative(url) {
+            return new Promise((resolve, reject) => {
+                const container = document.getElementById('playerContainer');
+                container.innerHTML = '<video controls style="width: 100%; height: 100%;"></video>';
+                const video = container.querySelector('video');
+                
+                video.addEventListener('loadedmetadata', () => {
+                    log('原生播放器載入完成', 'success');
+                    resolve(video);
+                });
+                
+                video.addEventListener('error', (e) => {
+                    log(`原生播放器錯誤: ${e.message || '未知錯誤'}`, 'error');
+                    reject(new Error('原生播放器播放失敗'));
+                });
+                
+                video.src = url;
+            });
+        }
+        
+        // 測試播放
+        async function testUrl(url) {
+            log(`開始測試 URL: ${url}`);
+            updateStatus(`正在載入: ${url}`);
+            
+            cleanup();
+            
+            const mediaInfo = detectMediaFormat(url);
+            log(`媒體格式: ${JSON.stringify(mediaInfo)}`);
+            
+            // 根據格式選擇播放器
+            const decoders = [];
+            if (mediaInfo.isHLS) {
+                decoders.push('hls', 'native');
+            } else if (mediaInfo.isMP4) {
+                decoders.push('videojs', 'native');
+            } else {
+                decoders.push('native');
+            }
+            
+            // 過濾可用的解碼器
+            const availableDecoders = decoders.filter(d => supportedDecoders.includes(d));
+            
+            if (availableDecoders.length === 0) {
+                log('沒有可用的解碼器', 'error');
+                updateStatus('❌ 沒有可用的解碼器');
+                return;
+            }
+            
+            // 嘗試播放
+            for (const decoder of availableDecoders) {
+                try {
+                    log(`嘗試使用 ${decoder} 播放器`);
+                    updateStatus(`🔄 正在使用 ${decoder} 播放器...`);
+                    
+                    let player;
+                    switch (decoder) {
+                        case 'hls':
+                            player = await initHLS(url);
+                            break;
+                        case 'videojs':
+                            player = await initVideoJS(url);
+                            break;
+                        case 'native':
+                            player = await initNative(url);
+                            break;
+                        default:
+                            throw new Error(`未知解碼器: ${decoder}`);
+                    }
+                    
+                    currentPlayer = player;
+                    currentDecoder = decoder;
+                    
+                    log(`✅ ${decoder} 播放器成功初始化`, 'success');
+                    updateStatus(`✅ 正在使用 ${decoder} 播放器播放`);
+                    
+                    // 添加解碼器信息
+                    const container = document.getElementById('playerContainer');
+                    const info = document.createElement('div');
+                    info.className = 'decoder-info';
+                    info.innerHTML = `
+                        解碼器: ${decoder}<br>
+                        格式: ${Object.keys(mediaInfo).filter(k => mediaInfo[k] && k.startsWith('is')).join(', ')}<br>
+                        狀態: 播放中
+                    `;
+                    container.appendChild(info);
+                    
+                    return;
+                    
+                } catch (error) {
+                    log(`${decoder} 播放器失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            log('所有播放器都失敗了', 'error');
+            updateStatus('❌ 所有播放器都無法播放此媒體');
+        }
+        
+        // 初始化
+        window.addEventListener('load', () => {
+            log('頁面載入完成，檢測播放器能力...');
+            detectCapabilities();
+            updateStatus('準備就緒，請選擇測試媒體');
+        });
+    </script>
+</body>
+</html>

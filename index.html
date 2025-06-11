@@ -8,6 +8,23 @@
     <title>Abuji IPTV 播放器</title>
     <!-- 載入 HLS.js 用於 HLS 格式支援 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" crossorigin="anonymous" onerror="console.error('HLS.js 載入失敗')"></script>
+    
+    <!-- 載入 libvlc.js 用於更廣泛的格式支援 -->
+    <script src="https://cdn.jsdelivr.net/npm/vlc.js@latest/dist/vlc.min.js" crossorigin="anonymous" onerror="console.warn('libvlc.js 載入失敗，將使用其他播放器')"></script>
+    
+    <!-- 載入 Video.js (作為後備播放器) -->
+    <script src="https://vjs.zencdn.net/8.6.1/video.min.js" crossorigin="anonymous" onerror="console.warn('Video.js 載入失敗')"></script>
+    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
+    
+    <!-- 載入 DPlayer (支援更多格式) -->
+    <script src="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js" crossorigin="anonymous" onerror="console.warn('DPlayer 載入失敗')"></script>
+    
+    <!-- FLV.js 用於 FLV 格式支援 -->
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js" crossorigin="anonymous" onerror="console.warn('FLV.js 載入失敗')"></script>
+    
+    <!-- mpegts.js 用於 TS 格式支援 -->
+    <script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.js" crossorigin="anonymous" onerror="console.warn('mpegts.js 載入失敗')"></script>
+    
     <style>
       html, body {
         margin: 0;
@@ -58,6 +75,34 @@
         z-index: 1000;
         max-width: 300px;
       }
+      /* 增強的播放器樣式 */
+      .enhanced-player {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+      .player-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+      .decoder-info {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: monospace;
+        z-index: 100;
+      }
     </style>
   </head>
   <body>
@@ -70,7 +115,79 @@
       </div>
     </div>
     <!-- 載入 EasyPlayer Pro -->
-    <script src="/js/EasyPlayer-pro.js" crossorigin="anonymous" onerror="console.warn('EasyPlayer Pro 載入失敗，將使用後備播放器')"></script>
+    <script src="/js/EasyPlayer-pro.js" onload="console.log('✅ EasyPlayer Pro JS 已載入')" onerror="console.error('❌ EasyPlayer Pro 載入失敗')"></script>
+    
+    <!-- 初始化播放器檢測腳本 -->
+    <script>
+      // 延遲執行檢測，確保所有腳本都已載入
+      setTimeout(() => {
+        // 全域播放器檢測
+        window.playerCapabilities = {
+          libvlc: false,
+          easyplayer: false,
+          videojs: false,
+          dplayer: false,
+          flvjs: false,
+          mpegts: false,
+          hls: false,
+          webcodec: false,
+          native: true
+        }
+        
+        // 檢測 libvlc
+        if (typeof window.VLC !== 'undefined' || typeof window.vlc !== 'undefined') {
+          window.playerCapabilities.libvlc = true
+          console.log('✅ libvlc.js 可用')
+        }
+        
+        // 檢測 EasyPlayer Pro
+        if (typeof window.EasyPlayerPro === 'function') {
+          window.playerCapabilities.easyplayer = true
+          console.log('✅ EasyPlayer Pro 可用')
+        } else {
+          console.warn('❌ EasyPlayer Pro 不可用，類型:', typeof window.EasyPlayerPro)
+        }
+      
+              // 檢測 Video.js
+        if (typeof window.videojs !== 'undefined') {
+          window.playerCapabilities.videojs = true
+          console.log('✅ Video.js 可用')
+        }
+        
+        // 檢測 DPlayer
+        if (typeof window.DPlayer !== 'undefined') {
+          window.playerCapabilities.dplayer = true
+          console.log('✅ DPlayer 可用')
+        }
+        
+        // 檢測 FLV.js
+        if (typeof window.flvjs !== 'undefined') {
+          window.playerCapabilities.flvjs = true
+          console.log('✅ FLV.js 可用')
+        }
+        
+        // 檢測 mpegts.js
+        if (typeof window.mpegts !== 'undefined') {
+          window.playerCapabilities.mpegts = true
+          console.log('✅ mpegts.js 可用')
+        }
+        
+        // 檢測 HLS.js
+        if (typeof window.Hls !== 'undefined') {
+          window.playerCapabilities.hls = true
+          console.log('✅ HLS.js 可用')
+        }
+        
+        // 檢測 WebCodec
+        if ('VideoDecoder' in window && 'VideoEncoder' in window) {
+          window.playerCapabilities.webcodec = true
+          console.log('✅ WebCodec API 可用')
+        }
+        
+        console.log('🎬 播放器能力檢測完成:', window.playerCapabilities)
+      }, 500) // 延遲 500ms 確保所有腳本載入完成
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
     
     <!-- 錯誤處理腳本 -->
