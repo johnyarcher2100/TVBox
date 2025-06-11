@@ -22,8 +22,8 @@ const PlayerPage: React.FC = () => {
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [showNotification] = useState(true)
   const [isTransparent, setIsTransparent] = useState(false)
-  const [sidebarOpacity, setSidebarOpacity] = useState(85) // 透明度 0-100
-  const [sidebarWidth, setSidebarWidth] = useState(320) // 寬度 200-500px
+  const [sidebarOpacity, setSidebarOpacity] = useState(10) // 透明度 0-100
+  const [sidebarWidth, setSidebarWidth] = useState(200) // 寬度 200-500px
   const [error, setError] = useState<string | null>(null)
   const [isRating, setIsRating] = useState(false)
   const [ratingMessage, setRatingMessage] = useState<string | null>(null)
@@ -241,8 +241,8 @@ const PlayerPage: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setSidebarOpacity(85)
-                      setSidebarWidth(320)
+                      setSidebarOpacity(10)
+                      setSidebarWidth(200)
                       setIsTransparent(false)
                     }}
                     className="flex-1 bg-gray-600 bg-opacity-80 hover:bg-opacity-100 px-3 py-1 rounded text-xs transition-all"
