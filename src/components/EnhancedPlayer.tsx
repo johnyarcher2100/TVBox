@@ -589,6 +589,14 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       if (!videoElementRef.current) throw new Error('視頻元素未準備好')
       
       const video = videoElementRef.current
+      
+      // 確保先清理之前的播放
+      video.pause()
+      video.currentTime = 0
+      video.src = ''
+      video.load()
+      
+      // 設置新的源
       video.src = url
       
       video.addEventListener('loadedmetadata', () => {
@@ -822,9 +830,84 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     }
   }, [supportedDecoders, currentDecoder, onError, isLoading])
 
+  // 清理當前播放器的函數
+  const cleanupCurrentPlayer = useCallback(() => {
+    console.log('清理當前播放器...')
+    
+    // 停止並清理 EasyPlayer
+    if (playerInstanceRef.current) {
+      try {
+        if (typeof playerInstanceRef.current.stop === 'function') {
+          playerInstanceRef.current.stop()
+        }
+        if (typeof playerInstanceRef.current.destroy === 'function') {
+          playerInstanceRef.current.destroy()
+        }
+        playerInstanceRef.current = null
+        console.log('EasyPlayer 已清理')
+      } catch (e) {
+        console.error('清理 EasyPlayer 時出錯:', e)
+      }
+    }
+    
+    // 停止並清理 HLS
+    if (hlsInstanceRef.current) {
+      try {
+        hlsInstanceRef.current.destroy()
+        hlsInstanceRef.current = null
+        console.log('HLS 播放器已清理')
+      } catch (e) {
+        console.error('清理 HLS 時出錯:', e)
+      }
+    }
+    
+    // 停止並清理 libVLC
+    if (vlcInstanceRef.current) {
+      try {
+        vlcInstanceRef.current.stop()
+        vlcInstanceRef.current = null
+        console.log('libVLC 播放器已清理')
+      } catch (e) {
+        console.error('清理 libVLC 時出錯:', e)
+      }
+    }
+    
+    // 停止原生 video 元素
+    if (videoElementRef.current) {
+      try {
+        const video = videoElementRef.current
+        video.pause()
+        video.currentTime = 0
+        video.src = ''
+        video.load() // 重置 video 元素
+        console.log('原生 video 元素已重置')
+      } catch (e) {
+        console.error('重置 video 元素時出錯:', e)
+      }
+    }
+    
+    // 清理播放器容器
+    if (playerContainerRef.current) {
+      try {
+        playerContainerRef.current.innerHTML = ''
+        console.log('播放器容器已清理')
+      } catch (e) {
+        console.error('清理播放器容器時出錯:', e)
+      }
+    }
+    
+    // 重置狀態
+    setCurrentDecoder('none')
+    setIsLoading(false)
+    setError(null)
+  }, [])
+
   // 初始化播放器
   const initPlayer = useCallback(async (url: string, preferredDecoder?: string): Promise<void> => {
     if (!url) return
+    
+    // 先清理前一個播放器
+    cleanupCurrentPlayer()
     
     setIsLoading(true)
     setError(null)
@@ -896,48 +979,32 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       setError(`播放器錯誤: ${error}`)
       setIsLoading(false)
     }
-  }, [supportedDecoders, onError])
+  }, [supportedDecoders, onError, cleanupCurrentPlayer])
 
   // 初始化支援的解碼器
   useEffect(() => {
     detectSupportedDecoders()
   }, [detectSupportedDecoders])
 
-  // 當頻道改變時初始化播放器
+  // 當頻道改變時清理前一個播放器並初始化新播放器
   useEffect(() => {
     if (channel?.url && supportedDecoders.length > 0) {
+      console.log('頻道變更，準備切換播放器:', channel.name, channel.url)
       initPlayer(channel.url)
+    } else if (!channel?.url) {
+      // 如果沒有頻道，清理所有播放器
+      console.log('無頻道，清理所有播放器')
+      cleanupCurrentPlayer()
     }
-  }, [channel?.url, supportedDecoders, initPlayer])
+  }, [channel?.url, supportedDecoders, initPlayer, cleanupCurrentPlayer, channel?.name])
 
   // 清理資源
   useEffect(() => {
     return () => {
-      if (playerInstanceRef.current) {
-        try {
-          playerInstanceRef.current.destroy()
-        } catch (e) {
-          console.error('銷毀 EasyPlayer 時出錯:', e)
-        }
-      }
-      
-      if (hlsInstanceRef.current) {
-        try {
-          hlsInstanceRef.current.destroy()
-        } catch (e) {
-          console.error('銷毀 HLS 時出錯:', e)
-        }
-      }
-      
-      if (vlcInstanceRef.current) {
-        try {
-          vlcInstanceRef.current.stop()
-        } catch (e) {
-          console.error('銷毀 libvlc 時出錯:', e)
-        }
-      }
+      console.log('組件卸載，清理所有播放器')
+      cleanupCurrentPlayer()
     }
-  }, [])
+  }, [cleanupCurrentPlayer])
 
   return (
     <div className="relative w-full h-full bg-black">
