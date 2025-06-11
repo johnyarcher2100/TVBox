@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useChannelStore } from '@/stores/channelStore'
 import { useUserStore } from '@/stores/userStore'
 import { EnhancedPlayer } from '@/components/EnhancedPlayer'
+import MarqueeDisplay from '@/components/MarqueeDisplay'
+import ImageNotification from '@/components/ImageNotification'
 import { 
   ArrowLeft, 
   ThumbsUp, 
@@ -20,13 +22,179 @@ const PlayerPage: React.FC = () => {
 
   const [showSidebar, setShowSidebar] = useState(true)
   const [showRatingModal, setShowRatingModal] = useState(false)
-  const [showNotification] = useState(true)
-  const [isTransparent, setIsTransparent] = useState(false)
+
   const [sidebarOpacity, setSidebarOpacity] = useState(10) // 透明度 0-100
   const [sidebarWidth, setSidebarWidth] = useState(200) // 寬度 200-500px
   const [error, setError] = useState<string | null>(null)
   const [isRating, setIsRating] = useState(false)
   const [ratingMessage, setRatingMessage] = useState<string | null>(null)
+  
+  // 添加自動收起相關狀態
+  const [autoHideTimeout, setAutoHideTimeout] = useState<NodeJS.Timeout | null>(null)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const channelListRef = useRef<HTMLDivElement>(null)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null)
+  
+  // 添加滑鼠選擇相關狀態
+  const [selectedChannelIndex, setSelectedChannelIndex] = useState(-1)
+  const [isMouseSelecting, setIsMouseSelecting] = useState(false)
+  
+  // 添加滑鼠位置狀態
+  const [isMouseInSidebar, setIsMouseInSidebar] = useState(false)
+  // 添加移動設備檢測
+  const [isMobileDevice, setIsMobileDevice] = useState(false)
+
+
+  // 檢測是否為移動設備
+  useEffect(() => {
+    const checkMobileDevice = () => {
+      const userAgent = navigator.userAgent.toLowerCase()
+      const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      setIsMobileDevice(isMobile || isTouchDevice)
+    }
+    
+    checkMobileDevice()
+    window.addEventListener('resize', checkMobileDevice)
+    return () => window.removeEventListener('resize', checkMobileDevice)
+  }, [])
+
+  // 自動收起功能 - 先定義
+  const resetAutoHideTimer = useCallback(() => {
+    // 清除現有計時器
+    if (autoHideTimeout) {
+      clearTimeout(autoHideTimeout)
+    }
+    
+    // 只有當滑鼠不在側邊欄且不在滾動時才設置自動收起
+    if (!isMouseInSidebar && !isScrolling) {
+      // 根據設備類型設置不同的自動收起時間
+      const hideDelay = isMobileDevice ? 10000 : 7000 // 手機 10 秒，桌面 7 秒
+      
+      const newTimeout = setTimeout(() => {
+        setShowSidebar(false)
+      }, hideDelay)
+      
+      setAutoHideTimeout(newTimeout)
+    }
+  }, [autoHideTimeout, isMouseInSidebar, isScrolling, isMobileDevice])
+
+  // 處理滑鼠進入側邊欄
+  const handleMouseEnterSidebar = useCallback(() => {
+    setIsMouseInSidebar(true)
+    // 滑鼠進入時清除自動收起計時器
+    if (autoHideTimeout) {
+      clearTimeout(autoHideTimeout)
+      setAutoHideTimeout(null)
+    }
+  }, [autoHideTimeout])
+
+  // 處理滑鼠離開側邊欄
+  const handleMouseLeaveSidebar = useCallback(() => {
+    setIsMouseInSidebar(false)
+    // 滑鼠離開時開始自動收起計時
+    if (showSidebar) {
+      resetAutoHideTimer()
+    }
+  }, [showSidebar, resetAutoHideTimer])
+
+  // 處理頻道列表滾動
+  const handleChannelListScroll = useCallback(() => {
+    setIsScrolling(true)
+    
+    // 清除之前的滾動計時器
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout)
+    }
+    
+    // 設置新的滾動結束計時器
+    const newScrollTimeout = setTimeout(() => {
+      setIsScrolling(false)
+      // 滾動結束後，如果滑鼠不在側邊欄內則重新開始計時
+      if (showSidebar && !isMouseInSidebar) {
+        resetAutoHideTimer()
+      }
+    }, 300) // 300ms後認為滾動結束
+    
+    setScrollTimeout(newScrollTimeout)
+  }, [scrollTimeout, showSidebar, isMouseInSidebar, resetAutoHideTimer])
+
+  // 當側邊欄顯示狀態改變時的處理
+  useEffect(() => {
+    if (showSidebar) {
+      // 側邊欄顯示時，如果滑鼠不在側邊欄內才開始計時
+      if (!isMouseInSidebar) {
+        resetAutoHideTimer()
+      }
+    } else {
+      // 隱藏時清除所有計時器
+      if (autoHideTimeout) {
+        clearTimeout(autoHideTimeout)
+        setAutoHideTimeout(null)
+      }
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout)
+        setScrollTimeout(null)
+      }
+      setIsMouseInSidebar(false)
+    }
+    
+    // 清理函數
+    return () => {
+      if (autoHideTimeout) {
+        clearTimeout(autoHideTimeout)
+      }
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout)
+      }
+    }
+  }, [showSidebar, isMouseInSidebar, resetAutoHideTimer])
+
+
+
+  // 處理全域用戶活動
+  const handleUserActivity = useCallback(() => {
+    if (showSidebar) {
+      resetAutoHideTimer()
+    }
+  }, [showSidebar, resetAutoHideTimer])
+
+  // 添加全域事件監聽器來檢測用戶活動
+  useEffect(() => {
+    const events = [
+      'click',
+      'touchstart',
+      'touchend',
+      'touchmove',
+      'mousedown',
+      'mousemove',
+      'keydown',
+      'scroll'
+    ]
+    
+    const handleActivity = (e: Event) => {
+      // 如果是手機設備，只關注點擊和觸摸事件
+      if (isMobileDevice) {
+        if (['click', 'touchstart', 'touchend'].includes(e.type)) {
+          handleUserActivity()
+        }
+      } else {
+        // 桌面設備關注所有活動
+        handleUserActivity()
+      }
+    }
+    
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, { passive: true })
+    })
+    
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity)
+      })
+    }
+  }, [handleUserActivity, isMobileDevice])
 
   useEffect(() => {
     if (!currentChannel) {
@@ -34,9 +202,83 @@ const PlayerPage: React.FC = () => {
     }
   }, [currentChannel, navigate])
 
-  const handleChannelSelect = useCallback((channel: any) => {
+  // 尋找當前播放頻道的索引
+  useEffect(() => {
+    if (currentChannel && channels.length > 0) {
+      const currentIndex = channels.findIndex(channel => channel.id === currentChannel.id)
+      if (currentIndex !== -1) {
+        setSelectedChannelIndex(currentIndex)
+      }
+    }
+  }, [currentChannel, channels])
+
+  // 處理滑鼠滾輪選擇
+  const handleWheelSelect = useCallback((e: React.WheelEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (channels.length === 0) return
+    
+    setIsMouseSelecting(true)
+    
+    const delta = e.deltaY > 0 ? 1 : -1
+    setSelectedChannelIndex(prevIndex => {
+      let newIndex = prevIndex + delta
+      
+      // 循環選擇
+      if (newIndex >= channels.length) {
+        newIndex = 0
+      } else if (newIndex < 0) {
+        newIndex = channels.length - 1
+      }
+      
+      return newIndex
+    })
+    
+    // 300ms後清除滑鼠選擇狀態
+    setTimeout(() => {
+      setIsMouseSelecting(false)
+    }, 300)
+  }, [channels.length])
+
+  // 滾動到選中的頻道
+  useEffect(() => {
+    if (selectedChannelIndex >= 0 && channelListRef.current && isMouseSelecting) {
+      const channelElements = channelListRef.current.querySelectorAll('[data-channel-index]')
+      const selectedElement = channelElements[selectedChannelIndex] as HTMLElement
+      
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        })
+      }
+    }
+  }, [selectedChannelIndex, isMouseSelecting])
+
+  // 處理頻道選擇點擊
+  const handleChannelSelect = useCallback((channel: any, index: number) => {
+    setSelectedChannelIndex(index)
     useChannelStore.getState().setCurrentChannel(channel)
   }, [])
+
+  // 處理鍵盤確認選擇
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (showSidebar && selectedChannelIndex >= 0 && channels.length > 0) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          const selectedChannel = channels[selectedChannelIndex]
+          if (selectedChannel) {
+            handleChannelSelect(selectedChannel, selectedChannelIndex)
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [showSidebar, selectedChannelIndex, channels, handleChannelSelect])
 
   const handleRating = useCallback(async (isLike: boolean) => {
     if (!currentChannel || isRating) return
@@ -133,16 +375,22 @@ const PlayerPage: React.FC = () => {
 
       {/* 左側 Sidebar - 覆蓋在影片上方 */}
       <div 
+        ref={sidebarRef}
         className={`absolute left-0 top-0 bottom-0 ${
           showSidebar ? '' : 'w-0'
         } transition-all duration-300 border-r border-gray-700 flex flex-col overflow-hidden z-30 backdrop-blur-sm`}
         style={sidebarStyle}
+        onMouseEnter={handleMouseEnterSidebar}
+        onMouseLeave={handleMouseLeaveSidebar}
+        onTouchStart={handleUserActivity}
+        onTouchMove={handleUserActivity}
+        onTouchEnd={handleUserActivity}
       >
         {showSidebar && (
           <>
-            {/* Sidebar 頂部控制 */}
-            <div className="p-4 border-b border-gray-700 border-opacity-50">
-              <div className="flex items-center justify-between mb-4">
+            {/* 頂部返回按鈕 - 移到最上方 */}
+            <div className="flex-shrink-0 p-3 border-b border-gray-700 border-opacity-50">
+              <div className="flex items-center justify-between">
                 <button
                   onClick={() => navigate('/')}
                   className="flex items-center gap-2 bg-gray-700 bg-opacity-80 hover:bg-opacity-100 px-3 py-2 rounded-lg transition-all text-sm"
@@ -159,15 +407,90 @@ const PlayerPage: React.FC = () => {
                   <ChevronLeft size={20} />
                 </button>
               </div>
+            </div>
 
-              {/* 當前頻道資訊 */}
-              <div className="bg-gray-700 bg-opacity-80 rounded-lg p-3 backdrop-blur-sm">
+            {/* 頻道列表 - 加長高度 */}
+            <div className="flex-[2] overflow-hidden border-b border-gray-700 border-opacity-50">
+              <div className="p-4 pb-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-white">頻道列表</h3>
+                  <span className="text-xs text-gray-300">{channels.length} 個頻道</span>
+                </div>
+              </div>
+              
+              <div 
+                ref={channelListRef}
+                className="flex-1 overflow-y-auto px-4 pb-4"
+                onScroll={handleChannelListScroll}
+                onWheel={handleWheelSelect}
+                onTouchStart={handleUserActivity}
+                onTouchMove={handleUserActivity}
+                onTouchEnd={handleUserActivity}
+              >
+                <div className="space-y-2">
+                  {channels.map((channel, index) => (
+                    <div
+                      key={channel.id}
+                      data-channel-index={index}
+                      onClick={() => handleChannelSelect(channel, index)}
+                      className={`p-3 rounded-lg cursor-pointer transition-all backdrop-blur-sm ${
+                        currentChannel?.id === channel.id
+                          ? 'bg-blue-600 bg-opacity-90 ring-2 ring-blue-400 ring-opacity-50'
+                          : selectedChannelIndex === index && isMouseSelecting
+                          ? 'bg-yellow-600 bg-opacity-80 ring-2 ring-yellow-400 ring-opacity-50'
+                          : 'bg-gray-700 bg-opacity-60 hover:bg-opacity-80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {channel.logo && (
+                          <img
+                            src={channel.logo}
+                            alt={channel.name}
+                            className="w-8 h-8 rounded object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate text-white">{channel.name}</p>
+                          <div className="flex items-center justify-between text-xs text-gray-300">
+                            <span>評分: {channel.rating}</span>
+                            <span>{channel.category || '未分類'}</span>
+                          </div>
+                        </div>
+                        
+                        {/* 選擇指示器 */}
+                        {selectedChannelIndex === index && isMouseSelecting && (
+                          <div className="text-yellow-400">
+                            ▶
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 滑鼠選擇提示 */}
+                {isMouseSelecting && (
+                  <div className="sticky bottom-0 mt-2 p-2 bg-gray-800 bg-opacity-90 rounded text-xs text-center text-yellow-400 backdrop-blur-sm">
+                    🖱️ 滾輪選擇 | 點擊或按 Enter 確認
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 控制面板 - 縮減高度 */}
+            <div className="flex-[0.6] flex-shrink-0 p-4 overflow-y-auto">
+              {/* 當前頻道資訊 - 簡化 */}
+              <div className="bg-gray-700 bg-opacity-80 rounded-lg p-3 backdrop-blur-sm mb-3">
                 <div className="flex items-center gap-3 mb-2">
                   {currentChannel.logo && (
                     <img
                       src={currentChannel.logo}
                       alt={currentChannel.name}
-                      className="w-8 h-8 rounded object-cover"
+                      className="w-6 h-6 rounded object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement
                         target.style.display = 'none'
@@ -175,7 +498,7 @@ const PlayerPage: React.FC = () => {
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold truncate text-white">{currentChannel.name}</h2>
+                    <h2 className="font-medium truncate text-white text-sm">{currentChannel.name}</h2>
                     <p className="text-xs text-gray-300">
                       評分: <span className="text-orange-400 font-medium">{currentChannel.rating}</span>/9999
                     </p>
@@ -184,30 +507,18 @@ const PlayerPage: React.FC = () => {
                 
                 <button
                   onClick={() => setShowRatingModal(true)}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 bg-opacity-90 hover:bg-opacity-100 px-3 py-2 rounded-lg transition-all text-sm"
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 bg-opacity-90 hover:bg-opacity-100 px-3 py-1.5 rounded-lg transition-all text-xs"
                 >
-                  <Star size={16} />
-                  為此頻道評分
+                  <Star size={14} />
+                  評分
                 </button>
               </div>
 
-              {/* 透明度控制 */}
-              <div className="mt-4 space-y-4">
+              {/* 設定面板 - 簡化 */}
+              <div className="space-y-2">
+                {/* 透明度控制 */}
                 <div>
-                  <label className="flex items-center gap-2 text-sm text-gray-200 mb-2">
-                    <input
-                      type="checkbox"
-                      checked={isTransparent}
-                      onChange={(e) => setIsTransparent(e.target.checked)}
-                      className="rounded"
-                    />
-                    側邊欄透明模式
-                  </label>
-                </div>
-                
-                {/* 透明度滑動條 */}
-                <div>
-                  <label className="block text-sm text-gray-200 mb-2">
+                  <label className="block text-xs text-gray-200 mb-1">
                     透明度: {sidebarOpacity}%
                   </label>
                   <input
@@ -216,15 +527,15 @@ const PlayerPage: React.FC = () => {
                     max="100"
                     value={sidebarOpacity}
                     onChange={(e) => setSidebarOpacity(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                    className="w-full h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
                     style={opacitySliderStyle}
                   />
                 </div>
                 
                 {/* 寬度滑動條 */}
                 <div>
-                  <label className="block text-sm text-gray-200 mb-2">
-                    側邊欄寬度: {sidebarWidth}px
+                  <label className="block text-xs text-gray-200 mb-1">
+                    寬度: {sidebarWidth}px
                   </label>
                   <input
                     type="range"
@@ -232,67 +543,33 @@ const PlayerPage: React.FC = () => {
                     max="500"
                     value={sidebarWidth}
                     onChange={(e) => setSidebarWidth(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                    className="w-full h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
                     style={widthSliderStyle}
                   />
                 </div>
                 
                 {/* 重置按鈕 */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSidebarOpacity(10)
-                      setSidebarWidth(200)
-                      setIsTransparent(false)
-                    }}
-                    className="flex-1 bg-gray-600 bg-opacity-80 hover:bg-opacity-100 px-3 py-1 rounded text-xs transition-all"
-                  >
-                    重置預設
-                  </button>
-                </div>
-              </div>
-            </div>
+                <button
+                  onClick={() => {
+                    setSidebarOpacity(10)
+                    setSidebarWidth(200)
+                  }}
+                  className="w-full bg-gray-600 bg-opacity-80 hover:bg-opacity-100 px-3 py-1 rounded text-xs transition-all"
+                >
+                  重置預設
+                </button>
 
-            {/* 頻道列表 */}
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-white">頻道列表</h3>
-                <span className="text-xs text-gray-300">{channels.length} 個頻道</span>
-              </div>
-              
-              <div className="space-y-2">
-                {channels.map((channel) => (
-                  <div
-                    key={channel.id}
-                    onClick={() => handleChannelSelect(channel)}
-                    className={`p-3 rounded-lg cursor-pointer transition-all backdrop-blur-sm ${
-                      currentChannel?.id === channel.id
-                        ? 'bg-blue-600 bg-opacity-90 ring-2 ring-blue-400 ring-opacity-50'
-                        : 'bg-gray-700 bg-opacity-60 hover:bg-opacity-80'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {channel.logo && (
-                        <img
-                          src={channel.logo}
-                          alt={channel.name}
-                          className="w-8 h-8 rounded object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                          }}
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate text-white">{channel.name}</p>
-                        <div className="flex items-center justify-between text-xs text-gray-300">
-                          <span>評分: {channel.rating}</span>
-                          <span>{channel.category || '未分類'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                {/* 自動收起提示 */}
+                <div className="text-xs text-gray-400 text-center bg-gray-800 bg-opacity-50 rounded p-1.5">
+                  {isMobileDevice ? (
+                    <>📱 10秒無點擊自動收起</>
+                  ) : isMouseInSidebar ? (
+                    <>💡 滑鼠在側邊欄，不會自動收起</>
+                  ) : (
+                    <>💡 7秒無操作自動收起</>
+                  )}
+                  {isScrolling && <div className="text-green-400 mt-1">🎯 滑動中...</div>}
+                </div>
               </div>
             </div>
           </>
@@ -311,12 +588,18 @@ const PlayerPage: React.FC = () => {
       )}
 
       {/* 推播訊息跑馬燈 */}
-      {showNotification && user && user.user_level >= 1 && (
-        <div className="absolute top-4 right-4 bg-blue-600 bg-opacity-90 text-white px-4 py-2 rounded-lg max-w-md z-30 backdrop-blur-sm">
-          <div className="animate-pulse">
-            <p className="text-sm">🎬 歡迎使用 Abuji IPTV 播放器</p>
-          </div>
-        </div>
+      {user && user.user_level >= 1 && (
+        <MarqueeDisplay 
+          userLevel={user.user_level}
+          className="absolute top-0 left-0 right-0 z-30"
+        />
+      )}
+
+      {/* 圖示推播 */}
+      {user && user.user_level >= 1 && (
+        <ImageNotification 
+          userLevel={user.user_level}
+        />
       )}
 
       {/* 快速評分按鈕 */}

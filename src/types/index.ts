@@ -38,11 +38,14 @@ export interface Notification {
   type: 'text' | 'image'
   target_levels: number[]
   is_global: boolean
-  schedule_time?: string
-  interval_seconds?: number
+  schedule_time: string | null
+  interval_seconds: number | null
+  repeat_interval_seconds: number | null
+  repeat_count: number | null
+  sent_count: number | null
   is_active: boolean
-  expires_at?: string
-  image_url?: string
+  expires_at: string | null
+  image_url: string | null
   created_by: string
   created_at: string
 }
@@ -123,4 +126,38 @@ export interface PlayerStore {
   toggleMute: () => void
   toggleFullscreen: () => void
   seek: (time: number) => void
-} 
+}
+
+export interface NotificationForm {
+  content: string
+  type: 'text' | 'image'
+  broadcast_type: 'global' | 'user' | 'free'
+  schedule_type: 'immediate' | 'scheduled' | 'interval' | 'repeat'
+  schedule_time?: string
+  interval_seconds?: number
+  repeat_interval_seconds?: number
+  repeat_count?: number
+  expires_at?: string
+  image_url?: string
+}
+
+export interface MarqueeMessage {
+  id: string
+  content: string
+  isActive: boolean
+}
+
+export const USER_LEVELS = {
+  FREE: 1,      // 免費用戶
+  USER: 2,      // 付費用戶
+  ADMIN: 3      // 管理員
+} as const
+
+export const BROADCAST_TARGETS = {
+  global: [1, 2, 3],   // 全域推播：針對所有等級
+  user: [1, 2],        // 用戶推播：針對免費和付費用戶
+  free: [1]            // 免費用戶推播：僅針對免費用戶
+} as const
+
+export type BroadcastType = keyof typeof BROADCAST_TARGETS
+export type UserLevel = typeof USER_LEVELS[keyof typeof USER_LEVELS] 

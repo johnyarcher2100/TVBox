@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage'
 import PlayerPage from './pages/PlayerPage' 
 import AdminPage from './pages/AdminPage'
 import DiagnosticPage from './pages/DiagnosticPage'
+import BroadcastManagePage from './pages/BroadcastManagePage'
 import LoginModal from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 
@@ -48,6 +49,16 @@ function App() {
           <Route 
             path="/diagnostic" 
             element={<DiagnosticPage />} 
+          />
+          <Route 
+            path="/broadcast" 
+            element={
+              isAuthenticated && user?.user_level === 3 ? (
+                <BroadcastManagePage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
           />
         </Routes>
       </Router>
