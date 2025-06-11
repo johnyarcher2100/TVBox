@@ -7,9 +7,7 @@ import {
   ArrowLeft, 
   ThumbsUp, 
   ThumbsDown, 
-  List, 
   Star, 
-  Settings,
   ChevronLeft,
   ChevronRight,
   MoreVertical
