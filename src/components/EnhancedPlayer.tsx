@@ -343,12 +343,23 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       try {
         // 檢查 EasyPlayerPro 是否存在
         if (!(window as any).EasyPlayerPro) {
-          const error = 'EasyPlayerPro 播放器未載入'
-          console.error(error)
-          setError(error)
-          reject(new Error(error))
+          console.warn('EasyPlayerPro 播放器未載入，嘗試載入...')
+          // 嘗試動態載入或等待載入
+          setTimeout(() => {
+            if (!(window as any).EasyPlayerPro) {
+              const error = 'EasyPlayerPro 播放器未載入'
+              console.error(error)
+              setError(error)
+              reject(new Error(error))
+            } else {
+              // 如果載入成功，重新嘗試初始化
+              initEasyPlayer(url).then(resolve).catch(reject)
+            }
+          }, 1000)
           return
         }
+        
+        console.log('EasyPlayerPro 檢查通過:', typeof (window as any).EasyPlayerPro)
 
         if (!playerContainerRef.current) {
           const error = '播放器容器未準備好'
@@ -357,6 +368,8 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
           reject(new Error(error))
           return
         }
+        
+        console.log('播放器容器檢查通過:', playerContainerRef.current)
         
         // 清理之前的實例
         if (playerInstanceRef.current) {
@@ -370,14 +383,16 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
           playerInstanceRef.current = null
         }
 
-        // 清空並重新設置容器
+        // 設置容器（不清空，避免破壞DOM結構）
         const container = playerContainerRef.current
-        container.innerHTML = ''
         
         // 設置容器樣式
         container.style.width = '100%'
         container.style.height = '100%'
         container.style.position = 'relative'
+        container.style.display = 'block'
+        
+        console.log('EasyPlayer 容器已準備，尺寸:', container.offsetWidth, 'x', container.offsetHeight)
 
         // 創建新的播放器實例
         const config = {
@@ -405,15 +420,27 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
         // 延遲創建播放器實例，確保 DOM 準備好
         setTimeout(() => {
           try {
-            // @ts-ignore
-            const player = new window.EasyPlayerPro(container, config)
-            
-            if (!player) {
-              const error = '播放器創建失敗'
+            // 再次檢查容器是否存在
+            if (!container || !container.parentNode) {
+              const error = '播放器容器已被移除'
+              console.error(error)
               setError(error)
               reject(new Error(error))
               return
             }
+
+            // @ts-ignore
+            const player = new window.EasyPlayerPro(container, config)
+            
+            if (!player) {
+              const error = '播放器創建失敗 - 實例為空'
+              console.error(error)
+              setError(error)
+              reject(new Error(error))
+              return
+            }
+            
+            console.log('EasyPlayer 實例創建成功:', player)
 
             playerInstanceRef.current = player
             let hasResolved = false
@@ -886,11 +913,33 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       }
     }
     
-    // 清理播放器容器
+    // 清理播放器容器內容（但保留容器本身）
     if (playerContainerRef.current) {
       try {
-        playerContainerRef.current.innerHTML = ''
-        console.log('播放器容器已清理')
+        const container = playerContainerRef.current
+        // 只清理非必要的子元素，保留容器結構
+        const children = Array.from(container.children)
+        children.forEach(child => {
+          // 如果是播放器相關的元素，清理它
+          if (child.className && (
+            child.className.includes('easy-player') || 
+            child.className.includes('video-js') ||
+            child.className.includes('dplayer')
+          )) {
+            try {
+              container.removeChild(child)
+            } catch (e) {
+              console.warn('清理子元素時出錯:', e)
+            }
+          }
+        })
+        
+        // 重新設置基本樣式
+        container.style.width = '100%'
+        container.style.height = '100%'
+        container.style.position = 'relative'
+        container.style.display = 'block'
+        console.log('播放器容器內容已清理')
       } catch (e) {
         console.error('清理播放器容器時出錯:', e)
       }
@@ -959,9 +1008,16 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       switch (decoder) {
         case 'easyplayer':
           if (supportedDecoders.includes('easyplayer')) {
-            await initEasyPlayer(url).catch((error) => handleError(error, 'EasyPlayer'))
+            await initEasyPlayer(url).catch((error) => {
+              console.error('EasyPlayer 初始化失敗，嘗試下一個解碼器:', error)
+              handleError(error, 'EasyPlayer')
+            })
           } else {
-            handleError(new Error('不支援'), 'EasyPlayer')
+            console.log('EasyPlayer 不在支援列表中，嘗試原生播放器')
+            await initNativePlayer(url).catch((error) => {
+              console.error('原生播放器也失敗:', error)
+              handleError(error, 'Native')
+            })
           }
           break
           
@@ -969,8 +1025,7 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
         default:
           await initNativePlayer(url).catch((error) => {
             console.error('Native 播放器初始化失敗:', error)
-            setError('所有播放器都無法播放此媒體')
-            setIsLoading(false)
+            handleError(error, 'Native')
           })
           break
       }
