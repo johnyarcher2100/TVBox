@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useChannelStore } from '@/stores/channelStore'
 import { useUserStore } from '@/stores/userStore'
@@ -36,11 +36,11 @@ const PlayerPage: React.FC = () => {
     }
   }, [currentChannel, navigate])
 
-  const handleChannelSelect = (channel: any) => {
+  const handleChannelSelect = useCallback((channel: any) => {
     useChannelStore.getState().setCurrentChannel(channel)
-  }
+  }, [])
 
-  const handleRating = async (isLike: boolean) => {
+  const handleRating = useCallback(async (isLike: boolean) => {
     if (!currentChannel || isRating) return
     
     setIsRating(true)
@@ -72,17 +72,46 @@ const PlayerPage: React.FC = () => {
     } finally {
       setIsRating(false)
     }
-  }
+  }, [currentChannel, isRating, rateChannel])
 
-  const handlePlayerError = (errorMessage: string) => {
+  const handlePlayerError = useCallback((errorMessage: string) => {
     setError(errorMessage)
     console.error('播放器錯誤:', errorMessage)
-  }
+  }, [])
 
-  const handlePlayerReady = () => {
+  const handlePlayerReady = useCallback(() => {
     console.log('播放器準備就緒')
     setError(null)
-  }
+  }, [])
+
+  // 使用 useMemo 穩定 config 對象，避免播放器不必要的重新初始化
+  const playerConfig = useMemo(() => ({
+    debug: true,
+    preferredDecoder: 'easyplayer' as const
+  }), [])
+
+  // 使用 useMemo 穩定側邊欄樣式對象
+  const sidebarStyle = useMemo(() => ({
+    width: showSidebar ? `${sidebarWidth}px` : '0px',
+    backgroundColor: `rgba(31, 41, 55, ${sidebarOpacity / 100})`
+  }), [showSidebar, sidebarWidth, sidebarOpacity])
+
+  // 使用 useMemo 穩定評分模態框樣式對象
+  const ratingModalStyle = useMemo(() => ({
+    backgroundColor: `rgba(31, 41, 55, ${sidebarOpacity / 100})`
+  }), [sidebarOpacity])
+
+  // 使用 useMemo 穩定滑動條樣式對象
+  const opacitySliderStyle = useMemo(() => ({
+    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${sidebarOpacity}%, #4b5563 ${sidebarOpacity}%, #4b5563 100%)`
+  }), [sidebarOpacity])
+
+  const widthSliderStyle = useMemo(() => {
+    const percentage = ((sidebarWidth - 200) / 300) * 100
+    return {
+      background: `linear-gradient(to right, #10b981 0%, #10b981 ${percentage}%, #4b5563 ${percentage}%, #4b5563 100%)`
+    }
+  }, [sidebarWidth])
 
   if (!currentChannel) {
     return (
@@ -100,10 +129,7 @@ const PlayerPage: React.FC = () => {
           channel={currentChannel}
           onError={handlePlayerError}
           onPlayerReady={handlePlayerReady}
-          config={{
-            debug: true,
-            preferredDecoder: 'easyplayer'
-          }}
+          config={playerConfig}
         />
       </div>
 
@@ -112,10 +138,7 @@ const PlayerPage: React.FC = () => {
         className={`absolute left-0 top-0 bottom-0 ${
           showSidebar ? '' : 'w-0'
         } transition-all duration-300 border-r border-gray-700 flex flex-col overflow-hidden z-30 backdrop-blur-sm`}
-        style={{
-          width: showSidebar ? `${sidebarWidth}px` : '0px',
-          backgroundColor: `rgba(31, 41, 55, ${sidebarOpacity / 100})`
-        }}
+        style={sidebarStyle}
       >
         {showSidebar && (
           <>
@@ -196,9 +219,7 @@ const PlayerPage: React.FC = () => {
                     value={sidebarOpacity}
                     onChange={(e) => setSidebarOpacity(Number(e.target.value))}
                     className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
-                    style={{
-                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${sidebarOpacity}%, #4b5563 ${sidebarOpacity}%, #4b5563 100%)`
-                    }}
+                    style={opacitySliderStyle}
                   />
                 </div>
                 
@@ -214,9 +235,7 @@ const PlayerPage: React.FC = () => {
                     value={sidebarWidth}
                     onChange={(e) => setSidebarWidth(Number(e.target.value))}
                     className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
-                    style={{
-                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sidebarWidth - 200) / 300) * 100}%, #4b5563 ${((sidebarWidth - 200) / 300) * 100}%, #4b5563 100%)`
-                    }}
+                    style={widthSliderStyle}
                   />
                 </div>
                 
@@ -331,9 +350,7 @@ const PlayerPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div 
             className="rounded-lg p-6 max-w-md w-full mx-4 transform transition-all backdrop-blur-sm"
-            style={{
-              backgroundColor: `rgba(31, 41, 55, ${sidebarOpacity / 100})`
-            }}
+            style={ratingModalStyle}
           >
             <div className="text-center mb-6">
               <h3 className="text-xl font-semibold mb-2 text-white">為頻道評分</h3>
