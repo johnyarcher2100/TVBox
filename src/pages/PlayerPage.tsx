@@ -24,6 +24,8 @@ const PlayerPage: React.FC = () => {
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [showNotification] = useState(true)
   const [isTransparent, setIsTransparent] = useState(false)
+  const [sidebarOpacity, setSidebarOpacity] = useState(85) // 透明度 0-100
+  const [sidebarWidth, setSidebarWidth] = useState(320) // 寬度 200-500px
   const [error, setError] = useState<string | null>(null)
   const [isRating, setIsRating] = useState(false)
   const [ratingMessage, setRatingMessage] = useState<string | null>(null)
@@ -108,10 +110,12 @@ const PlayerPage: React.FC = () => {
       {/* 左側 Sidebar - 覆蓋在影片上方 */}
       <div 
         className={`absolute left-0 top-0 bottom-0 ${
-          showSidebar ? 'w-80' : 'w-0'
-        } transition-all duration-300 ${
-          isTransparent ? 'bg-gray-800 bg-opacity-75' : 'bg-gray-800 bg-opacity-95'
-        } border-r border-gray-700 flex flex-col overflow-hidden z-30 backdrop-blur-sm`}
+          showSidebar ? '' : 'w-0'
+        } transition-all duration-300 border-r border-gray-700 flex flex-col overflow-hidden z-30 backdrop-blur-sm`}
+        style={{
+          width: showSidebar ? `${sidebarWidth}px` : '0px',
+          backgroundColor: `rgba(31, 41, 55, ${sidebarOpacity / 100})`
+        }}
       >
         {showSidebar && (
           <>
@@ -167,16 +171,68 @@ const PlayerPage: React.FC = () => {
               </div>
 
               {/* 透明度控制 */}
-              <div className="mt-4">
-                <label className="flex items-center gap-2 text-sm text-gray-200">
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-200 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={isTransparent}
+                      onChange={(e) => setIsTransparent(e.target.checked)}
+                      className="rounded"
+                    />
+                    側邊欄透明模式
+                  </label>
+                </div>
+                
+                {/* 透明度滑動條 */}
+                <div>
+                  <label className="block text-sm text-gray-200 mb-2">
+                    透明度: {sidebarOpacity}%
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={isTransparent}
-                    onChange={(e) => setIsTransparent(e.target.checked)}
-                    className="rounded"
+                    type="range"
+                    min="20"
+                    max="100"
+                    value={sidebarOpacity}
+                    onChange={(e) => setSidebarOpacity(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${sidebarOpacity}%, #4b5563 ${sidebarOpacity}%, #4b5563 100%)`
+                    }}
                   />
-                  側邊欄透明模式
-                </label>
+                </div>
+                
+                {/* 寬度滑動條 */}
+                <div>
+                  <label className="block text-sm text-gray-200 mb-2">
+                    側邊欄寬度: {sidebarWidth}px
+                  </label>
+                  <input
+                    type="range"
+                    min="200"
+                    max="500"
+                    value={sidebarWidth}
+                    onChange={(e) => setSidebarWidth(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sidebarWidth - 200) / 300) * 100}%, #4b5563 ${((sidebarWidth - 200) / 300) * 100}%, #4b5563 100%)`
+                    }}
+                  />
+                </div>
+                
+                {/* 重置按鈕 */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSidebarOpacity(85)
+                      setSidebarWidth(320)
+                      setIsTransparent(false)
+                    }}
+                    className="flex-1 bg-gray-600 bg-opacity-80 hover:bg-opacity-100 px-3 py-1 rounded text-xs transition-all"
+                  >
+                    重置預設
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -274,9 +330,10 @@ const PlayerPage: React.FC = () => {
       {showRatingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div 
-            className={`bg-gray-800 ${
-              isTransparent ? 'bg-opacity-90' : 'bg-opacity-95'
-            } rounded-lg p-6 max-w-md w-full mx-4 transform transition-all backdrop-blur-sm`}
+            className="rounded-lg p-6 max-w-md w-full mx-4 transform transition-all backdrop-blur-sm"
+            style={{
+              backgroundColor: `rgba(31, 41, 55, ${sidebarOpacity / 100})`
+            }}
           >
             <div className="text-center mb-6">
               <h3 className="text-xl font-semibold mb-2 text-white">為頻道評分</h3>
