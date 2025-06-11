@@ -3,14 +3,25 @@ import { useNavigate } from 'react-router-dom'
 import { useChannelStore } from '@/stores/channelStore'
 import { useUserStore } from '@/stores/userStore'
 import { EnhancedPlayer } from '@/components/EnhancedPlayer'
-import { ArrowLeft, ThumbsUp, ThumbsDown, List, Star } from 'lucide-react'
+import { 
+  ArrowLeft, 
+  ThumbsUp, 
+  ThumbsDown, 
+  List, 
+  Star, 
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical
+} from 'lucide-react'
 
 const PlayerPage: React.FC = () => {
   const navigate = useNavigate()
   const { currentChannel, channels, rateChannel } = useChannelStore()
   const { user } = useUserStore()
 
-  const [showChannelList, setShowChannelList] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(true)
+  const [showRatingModal, setShowRatingModal] = useState(false)
   const [showNotification] = useState(true)
   const [isTransparent, setIsTransparent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,7 +36,6 @@ const PlayerPage: React.FC = () => {
 
   const handleChannelSelect = (channel: any) => {
     useChannelStore.getState().setCurrentChannel(channel)
-    setShowChannelList(false)
   }
 
   const handleRating = async (isLike: boolean) => {
@@ -47,7 +57,8 @@ const PlayerPage: React.FC = () => {
       
       setTimeout(() => {
         setRatingMessage(null)
-      }, 3000)
+        setShowRatingModal(false)
+      }, 2000)
       
     } catch (error) {
       console.error('評分失敗:', error)
@@ -55,7 +66,7 @@ const PlayerPage: React.FC = () => {
       
       setTimeout(() => {
         setRatingMessage(null)
-      }, 5000)
+      }, 3000)
     } finally {
       setIsRating(false)
     }
@@ -80,119 +91,87 @@ const PlayerPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900 text-white overflow-hidden">
-      {/* 頂部控制欄 */}
-      <header className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between z-20">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg transition-colors"
-          >
-            <ArrowLeft size={20} />
-            返回
-          </button>
-          
-          <div>
-            <h1 className="text-lg font-semibold">{currentChannel.name}</h1>
-            <p className="text-sm text-gray-400">評分: {currentChannel.rating}/9999</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowChannelList(!showChannelList)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors"
-          >
-            <List size={20} />
-            頻道列表
-          </button>
-        </div>
-      </header>
-
-      {/* 主要播放區域 */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* 播放器 */}
-        <div className="absolute inset-0">
-          <EnhancedPlayer
-            channel={currentChannel}
-            onError={handlePlayerError}
-            onPlayerReady={handlePlayerReady}
-            config={{
-              debug: true,
-              preferredDecoder: 'easyplayer'
-            }}
-          />
-        </div>
-
-        {/* 推播訊息跑馬燈 */}
-        {showNotification && user && user.user_level >= 1 && (
-          <div className="absolute top-4 right-4 bg-blue-600 bg-opacity-90 text-white px-4 py-2 rounded-lg max-w-md">
-            <div className="animate-pulse">
-              <p className="text-sm">🎬 歡迎使用 Abuji IPTV 播放器</p>
-            </div>
-          </div>
-        )}
-
-        {/* 推播圖示 */}
-        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-          <div className="bg-black bg-opacity-50 p-2 rounded-full">
-            <Star className="text-yellow-400" size={24} />
-          </div>
-        </div>
-
-        {/* 左側控制面板 */}
-        <div 
-          className={`absolute left-0 top-0 bottom-0 w-80 bg-gray-900 transform transition-transform duration-300 z-10 ${
-            isTransparent ? 'bg-opacity-70' : 'bg-opacity-95'
-          }`}
-          style={{ 
-            transform: showChannelList ? 'translateX(0)' : 'translateX(-100%)',
-          }}
-        >
-          <div className="p-4 h-full flex flex-col">
-            {/* 透明度控制 */}
-            <div className="mb-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={isTransparent}
-                  onChange={(e) => setIsTransparent(e.target.checked)}
-                  className="rounded"
-                />
-                透明模式
-              </label>
-            </div>
-
-            {/* 評分按鈕 */}
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => handleRating(true)}
-                disabled={isRating}
-                className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 px-3 py-2 rounded-lg transition-colors"
-              >
-                <ThumbsUp size={16} />
-                讚 (+5)
-              </button>
-              <button
-                onClick={() => handleRating(false)}
-                disabled={isRating}
-                className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 px-3 py-2 rounded-lg transition-colors"
-              >
-                <ThumbsDown size={16} />
-                爛 (-19)
-              </button>
-            </div>
-
-            {/* 評分訊息 */}
-            {ratingMessage && (
-              <div className="mb-4 p-3 bg-blue-600 rounded-lg text-sm">
-                {ratingMessage}
+    <div className="h-screen flex bg-gray-900 text-white overflow-hidden">
+      {/* 左側 Sidebar */}
+      <div 
+        className={`${
+          showSidebar ? 'w-80' : 'w-0'
+        } transition-all duration-300 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden z-20`}
+      >
+        {showSidebar && (
+          <>
+            {/* Sidebar 頂部控制 */}
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => navigate('/')}
+                  className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg transition-colors text-sm"
+                >
+                  <ArrowLeft size={16} />
+                  返回首頁
+                </button>
+                
+                <button
+                  onClick={() => setShowSidebar(false)}
+                  className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                  title="隱藏側邊欄"
+                >
+                  <ChevronLeft size={20} />
+                </button>
               </div>
-            )}
+
+              {/* 當前頻道資訊 */}
+              <div className="bg-gray-700 rounded-lg p-3">
+                <div className="flex items-center gap-3 mb-2">
+                  {currentChannel.logo && (
+                    <img
+                      src={currentChannel.logo}
+                      alt={currentChannel.name}
+                      className="w-8 h-8 rounded object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-semibold truncate">{currentChannel.name}</h2>
+                    <p className="text-xs text-gray-400">
+                      評分: <span className="text-orange-400 font-medium">{currentChannel.rating}</span>/9999
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors text-sm"
+                >
+                  <Star size={16} />
+                  為此頻道評分
+                </button>
+              </div>
+
+              {/* 透明度控制 */}
+              <div className="mt-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={isTransparent}
+                    onChange={(e) => setIsTransparent(e.target.checked)}
+                    className="rounded"
+                  />
+                  側邊欄透明模式
+                </label>
+              </div>
+            </div>
 
             {/* 頻道列表 */}
-            <div className="flex-1 overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-3">頻道列表</h3>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">頻道列表</h3>
+                <span className="text-xs text-gray-400">{channels.length} 個頻道</span>
+              </div>
+              
               <div className="space-y-2">
                 {channels.map((channel) => (
                   <div
@@ -200,7 +179,7 @@ const PlayerPage: React.FC = () => {
                     onClick={() => handleChannelSelect(channel)}
                     className={`p-3 rounded-lg cursor-pointer transition-colors ${
                       currentChannel?.id === channel.id
-                        ? 'bg-blue-600'
+                        ? 'bg-blue-600 ring-2 ring-blue-400'
                         : 'bg-gray-700 hover:bg-gray-600'
                     }`}
                   >
@@ -218,16 +197,64 @@ const PlayerPage: React.FC = () => {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{channel.name}</p>
-                        <p className="text-xs text-gray-400">
-                          評分: {channel.rating} | {channel.category || '未分類'}
-                        </p>
+                        <div className="flex items-center justify-between text-xs text-gray-400">
+                          <span>評分: {channel.rating}</span>
+                          <span>{channel.category || '未分類'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+          </>
+        )}
+      </div>
+
+      {/* 主要播放區域 */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* 播放器 */}
+        <div className="absolute inset-0">
+          <EnhancedPlayer
+            channel={currentChannel}
+            onError={handlePlayerError}
+            onPlayerReady={handlePlayerReady}
+            config={{
+              debug: true,
+              preferredDecoder: 'easyplayer'
+            }}
+          />
+        </div>
+
+        {/* 側邊欄切換按鈕（當隱藏時） */}
+        {!showSidebar && (
+          <button
+            onClick={() => setShowSidebar(true)}
+            className="absolute top-4 left-4 bg-black bg-opacity-70 hover:bg-opacity-90 p-3 rounded-lg transition-all z-30"
+            title="顯示側邊欄"
+          >
+            <ChevronRight size={20} />
+          </button>
+        )}
+
+        {/* 推播訊息跑馬燈 */}
+        {showNotification && user && user.user_level >= 1 && (
+          <div className="absolute top-4 right-4 bg-blue-600 bg-opacity-90 text-white px-4 py-2 rounded-lg max-w-md z-30">
+            <div className="animate-pulse">
+              <p className="text-sm">🎬 歡迎使用 Abuji IPTV 播放器</p>
+            </div>
           </div>
+        )}
+
+        {/* 快速評分按鈕 */}
+        <div className="absolute bottom-6 right-6 z-30">
+          <button
+            onClick={() => setShowRatingModal(true)}
+            className="bg-black bg-opacity-70 hover:bg-opacity-90 p-3 rounded-full transition-all shadow-lg"
+            title="快速評分"
+          >
+            <MoreVertical size={20} />
+          </button>
         </div>
 
         {/* 錯誤顯示 */}
@@ -243,6 +270,67 @@ const PlayerPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 評分浮動框架 */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div 
+            className={`bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 transform transition-all ${
+              isTransparent ? 'bg-opacity-90' : ''
+            }`}
+          >
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-semibold mb-2">為頻道評分</h3>
+              <p className="text-gray-400 text-sm">{currentChannel.name}</p>
+              <p className="text-sm text-gray-400 mt-1">
+                目前評分: <span className="text-orange-400 font-medium">{currentChannel.rating}</span>/9999
+              </p>
+            </div>
+
+            {/* 評分按鈕 */}
+            <div className="flex gap-4 mb-6">
+              <button
+                onClick={() => handleRating(true)}
+                disabled={isRating}
+                className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 px-4 py-3 rounded-lg transition-colors"
+              >
+                <ThumbsUp size={20} />
+                <div className="text-center">
+                  <div>讚</div>
+                  <div className="text-xs text-green-200">+5分</div>
+                </div>
+              </button>
+              <button
+                onClick={() => handleRating(false)}
+                disabled={isRating}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 px-4 py-3 rounded-lg transition-colors"
+              >
+                <ThumbsDown size={20} />
+                <div className="text-center">
+                  <div>爛</div>
+                  <div className="text-xs text-red-200">-19分</div>
+                </div>
+              </button>
+            </div>
+
+            {/* 評分訊息 */}
+            {ratingMessage && (
+              <div className="mb-4 p-3 bg-blue-600 rounded-lg text-sm text-center">
+                {ratingMessage}
+              </div>
+            )}
+
+            {/* 關閉按鈕 */}
+            <button
+              onClick={() => setShowRatingModal(false)}
+              disabled={isRating}
+              className="w-full bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              關閉
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
