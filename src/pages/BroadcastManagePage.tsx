@@ -541,6 +541,7 @@ const BroadcastManagePage: React.FC = () => {
         throw error
       }
 
+      console.log('✅ 測試推播創建成功:', data)
       alert('測試推播發送成功！請檢查播放器是否收到推播。')
       
       // 重新載入推播清單，顯示新的測試推播
