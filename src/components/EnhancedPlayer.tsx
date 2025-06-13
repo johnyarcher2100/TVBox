@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import type { Channel } from '@/types'
 
+declare global {
+  interface Window {
+    Hls?: any;
+  }
+}
+
 interface PlayerConfig {
   isLive: boolean
   hasAudio: boolean
@@ -65,6 +71,26 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     preferredDecoder: 'easyplayer',
     ...config
   }
+
+  // 動態載入 Hls.js
+  const loadHlsJsScript = async (): Promise<void> => {
+    if (typeof window.Hls !== 'undefined') return;
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js';
+      script.async = true;
+      script.onload = () => {
+        if (typeof window.Hls !== 'undefined') {
+          console.log('Hls.js 載入成功');
+          resolve();
+        } else {
+          reject(new Error('Hls.js 載入失敗'));
+        }
+      };
+      script.onerror = () => reject(new Error('Hls.js 載入失敗'));
+      document.head.appendChild(script);
+    });
+  };
 
   // 檢測支援的解碼器
   const detectSupportedDecoders = useCallback(async () => {
@@ -133,6 +159,16 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     // 檢測 HLS.js
     if (capabilities.hls || typeof (window as any).Hls !== 'undefined') {
       decoders.push('hls')
+    } else {
+      // 動態載入 Hls.js
+      try {
+        await loadHlsJsScript();
+        if (typeof (window as any).Hls !== 'undefined') {
+          decoders.push('hls');
+        }
+      } catch (e) {
+        console.warn('Hls.js 動態載入失敗:', e);
+      }
     }
     
     // 原生播放器總是可用
