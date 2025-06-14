@@ -277,7 +277,7 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
             video.play().catch(() => {});
             resolve();
           });
-          hls.on(window.Hls.Events.ERROR, (event: any, data: any) => {
+          hls.on(window.Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
               setError('HLS.js 播放失敗: ' + data.details);
               reject(new Error(data.details));
@@ -295,7 +295,7 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
             video.play().catch(() => {});
             resolve();
           }, { once: true });
-          video.addEventListener('error', (e) => {
+          video.addEventListener('error', (_) => {
             setError('原生 HLS 播放失敗');
             reject(new Error('原生 HLS 播放失敗'));
           }, { once: true });
@@ -530,7 +530,7 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
         })
       })
       
-      video.addEventListener('error', () => {
+      video.addEventListener('error', (_) => {
         const error = video.error
         console.error('原生播放器錯誤:', error)
         setError(`原生播放器播放失敗: ${error?.message || '未知錯誤'}`)
