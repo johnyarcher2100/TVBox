@@ -44,6 +44,8 @@ const PlayerPage: React.FC = () => {
   const [isMouseInSidebar, setIsMouseInSidebar] = useState(false)
   // 添加移動設備檢測
   const [isMobileDevice, setIsMobileDevice] = useState(false)
+  // 新增互動狀態
+  const [isInteracting, setIsInteracting] = useState(false)
 
 
   // 檢測是否為移動設備
@@ -62,28 +64,23 @@ const PlayerPage: React.FC = () => {
 
   // 自動收起功能 - 先定義
   const resetAutoHideTimer = useCallback(() => {
-    // 清除現有計時器
     if (autoHideTimeout) {
       clearTimeout(autoHideTimeout)
     }
-    
-    // 只有當滑鼠不在側邊欄且不在滾動時才設置自動收起
-    if (!isMouseInSidebar && !isScrolling) {
-      // 根據設備類型設置不同的自動收起時間
-      const hideDelay = isMobileDevice ? 10000 : 7000 // 手機 10 秒，桌面 7 秒
-      
+    // 僅當未互動時才自動收起
+    if (!isInteracting && !isMouseInSidebar && !isScrolling) {
+      const hideDelay = isMobileDevice ? 10000 : 7000
       const newTimeout = setTimeout(() => {
         setShowSidebar(false)
       }, hideDelay)
-      
       setAutoHideTimeout(newTimeout)
     }
-  }, [autoHideTimeout, isMouseInSidebar, isScrolling, isMobileDevice])
+  }, [autoHideTimeout, isInteracting, isMouseInSidebar, isScrolling, isMobileDevice])
 
   // 處理滑鼠進入側邊欄
   const handleMouseEnterSidebar = useCallback(() => {
     setIsMouseInSidebar(true)
-    // 滑鼠進入時清除自動收起計時器
+    setIsInteracting(true)
     if (autoHideTimeout) {
       clearTimeout(autoHideTimeout)
       setAutoHideTimeout(null)
@@ -93,30 +90,50 @@ const PlayerPage: React.FC = () => {
   // 處理滑鼠離開側邊欄
   const handleMouseLeaveSidebar = useCallback(() => {
     setIsMouseInSidebar(false)
-    // 滑鼠離開時開始自動收起計時
+    setIsInteracting(false)
     if (showSidebar) {
       resetAutoHideTimer()
     }
   }, [showSidebar, resetAutoHideTimer])
 
+  // 處理點擊側邊欄
+  const handleSidebarClick = useCallback(() => {
+    setIsInteracting(true)
+    if (autoHideTimeout) {
+      clearTimeout(autoHideTimeout)
+      setAutoHideTimeout(null)
+    }
+  }, [autoHideTimeout])
+
+  // 處理觸控側邊欄
+  const handleSidebarTouch = useCallback(() => {
+    setIsInteracting(true)
+    if (autoHideTimeout) {
+      clearTimeout(autoHideTimeout)
+      setAutoHideTimeout(null)
+    }
+  }, [autoHideTimeout])
+
+  // 處理觸控結束
+  const handleSidebarTouchEnd = useCallback(() => {
+    setIsInteracting(false)
+    resetAutoHideTimer()
+  }, [resetAutoHideTimer])
+
   // 處理頻道列表滾動
   const handleChannelListScroll = useCallback(() => {
     setIsScrolling(true)
-    
-    // 清除之前的滾動計時器
+    setIsInteracting(true)
     if (scrollTimeout) {
       clearTimeout(scrollTimeout)
     }
-    
-    // 設置新的滾動結束計時器
     const newScrollTimeout = setTimeout(() => {
       setIsScrolling(false)
-      // 滾動結束後，如果滑鼠不在側邊欄內則重新開始計時
+      setIsInteracting(false)
       if (showSidebar && !isMouseInSidebar) {
         resetAutoHideTimer()
       }
-    }, 300) // 300ms後認為滾動結束
-    
+    }, 300)
     setScrollTimeout(newScrollTimeout)
   }, [scrollTimeout, showSidebar, isMouseInSidebar, resetAutoHideTimer])
 
@@ -382,9 +399,10 @@ const PlayerPage: React.FC = () => {
         style={sidebarStyle}
         onMouseEnter={handleMouseEnterSidebar}
         onMouseLeave={handleMouseLeaveSidebar}
-        onTouchStart={handleUserActivity}
-        onTouchMove={handleUserActivity}
-        onTouchEnd={handleUserActivity}
+        onClick={handleSidebarClick}
+        onTouchStart={handleSidebarTouch}
+        onTouchMove={handleSidebarTouch}
+        onTouchEnd={handleSidebarTouchEnd}
       >
         {showSidebar && (
           <>

@@ -719,7 +719,9 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
           <div className="text-center text-white">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
             <p>正在載入播放器...</p>
-            <p className="text-sm text-gray-300 mt-2">當前解碼器: {currentDecoder}</p>
+            <p className="text-sm text-gray-300 mt-2">
+              {currentDecoder === 'none' ? '初始化中...' : `當前解碼器: ${currentDecoder}`}
+            </p>
           </div>
         </div>
       )}
