@@ -245,9 +245,70 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     return info
   }
 
-
-
-
+  // 新增 HLS.js 播放器初始化
+  const initHlsPlayer = async (url: string): Promise<void> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        await loadHlsJsScript();
+        if (!window.Hls) {
+          reject(new Error('HLS.js 未載入'));
+          return;
+        }
+        if (!videoElementRef.current) {
+          reject(new Error('video 元素未準備好'));
+          return;
+        }
+        const video = videoElementRef.current;
+        // 清理前一個 HLS 實例
+        if (hlsInstanceRef.current) {
+          try { hlsInstanceRef.current.destroy(); } catch {}
+          hlsInstanceRef.current = null;
+        }
+        // HLS.js 支援瀏覽器
+        if (window.Hls.isSupported()) {
+          const hls = new window.Hls();
+          hls.loadSource(url);
+          hls.attachMedia(video);
+          hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+            setCurrentDecoder('hls');
+            setIsLoading(false);
+            setError(null);
+            onPlayerReady?.();
+            video.play().catch(() => {});
+            resolve();
+          });
+          hls.on(window.Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) {
+              setError('HLS.js 播放失敗: ' + data.details);
+              reject(new Error(data.details));
+            }
+          });
+          hlsInstanceRef.current = hls;
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          // Safari 原生支援
+          video.src = url;
+          video.addEventListener('loadedmetadata', () => {
+            setCurrentDecoder('hls-native');
+            setIsLoading(false);
+            setError(null);
+            onPlayerReady?.();
+            video.play().catch(() => {});
+            resolve();
+          }, { once: true });
+          video.addEventListener('error', (e) => {
+            setError('原生 HLS 播放失敗');
+            reject(new Error('原生 HLS 播放失敗'));
+          }, { once: true });
+          video.load();
+        } else {
+          reject(new Error('此瀏覽器不支援 HLS 播放'));
+        }
+      } catch (err) {
+        setError('HLS.js 初始化失敗: ' + err);
+        reject(err);
+      }
+    });
+  };
 
   // EasyPlayer Pro 播放器初始化
   const initEasyPlayer = async (url: string): Promise<void> => {
@@ -433,8 +494,6 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     })
   }
 
-
-
   // 原生播放器初始化
   const initNativePlayer = async (url: string) => {
     console.log('初始化原生播放器')
@@ -486,8 +545,6 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       onError?.(`所有播放器都無法播放此媒體: ${url}`)
     }
   }
-
-
 
   // 清理當前播放器的函數
   const cleanupCurrentPlayer = useCallback(() => {
@@ -586,28 +643,31 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
   // 初始化播放器
   const initPlayer = useCallback(async (url: string, preferredDecoder?: string): Promise<void> => {
     if (!url) return
-    
-    // 先清理前一個播放器
     cleanupCurrentPlayer()
-    
     setIsLoading(true)
     setError(null)
-    
     const mediaInfo = detectMediaInfo(url)
+    // m3u8 一律優先 HLS.js
+    if (mediaInfo.isHLS && supportedDecoders.includes('hls')) {
+      try {
+        await initHlsPlayer(url)
+        return
+      } catch (e) {
+        console.warn('HLS.js 播放失敗，嘗試 fallback:', e)
+        // fallback to EasyPlayer, native, etc.
+      }
+    }
     const decoder = preferredDecoder || mediaInfo.preferredDecoder || 'easyplayer'
-    
     console.log(`使用 ${decoder} 播放器播放:`, url)
     console.log('媒體信息:', mediaInfo)
-    
     const handleError = (error: any, decoderName: string) => {
       console.error(`${decoderName} 初始化失敗:`, error)
       setTimeout(() => {
         const mediaInfo = detectMediaInfo(url)
         const decoders = [...supportedDecoders]
-        
         let sortedDecoders: string[] = []
         if (mediaInfo.isHLS) {
-          sortedDecoders = ['easyplayer', 'hls', 'videojs', 'dplayer', 'libvlc', 'webcodec', 'native']
+          sortedDecoders = ['hls', 'easyplayer', 'videojs', 'dplayer', 'libvlc', 'webcodec', 'native']
         } else if (mediaInfo.isFLV) {
           sortedDecoders = ['easyplayer', 'flvjs', 'libvlc', 'dplayer', 'webcodec', 'wasm', 'native']
         } else if (mediaInfo.isWebRTC) {
@@ -617,11 +677,9 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
         } else {
           sortedDecoders = ['easyplayer', 'webcodec', 'libvlc', 'videojs', 'dplayer', 'hls', 'native']
         }
-        
         const availableDecoders = sortedDecoders.filter(d => decoders.includes(d))
         const currentIndex = availableDecoders.indexOf(decoder)
         const nextDecoder = availableDecoders[currentIndex + 1]
-        
         if (nextDecoder) {
           console.log(`嘗試下一個解碼器: ${nextDecoder}`)
           initPlayer(url, nextDecoder).catch((nextError) => {
@@ -635,7 +693,6 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
         }
       }, 500)
     }
-    
     try {
       switch (decoder) {
         case 'easyplayer':
@@ -652,7 +709,12 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
             })
           }
           break
-          
+        case 'hls':
+          await initHlsPlayer(url).catch((error) => {
+            console.error('HLS.js 初始化失敗，嘗試下一個解碼器:', error)
+            handleError(error, 'HLS.js')
+          })
+          break
         case 'native':
         default:
           await initNativePlayer(url).catch((error) => {
