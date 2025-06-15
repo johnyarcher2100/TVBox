@@ -39,11 +39,6 @@ const TestPage: React.FC = () => {
   ])
 
   const [currentChannel, setCurrentChannel] = useState(testChannels[0])
-  const [playerError, setPlayerError] = useState<string | null>(null)
-
-  const handleSnapshot = (imageData: string) => {
-    console.log('截圖完成:', imageData.substring(0, 50) + '...')
-  }
 
   return (
     <div className="h-screen bg-gray-900 flex">

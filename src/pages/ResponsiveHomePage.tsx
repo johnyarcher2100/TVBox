@@ -50,11 +50,6 @@ export const ResponsiveHomePage: React.FC = () => {
     setPlayerError(null)
   }
 
-  // 處理截圖
-  const handleSnapshot = (imageData: string) => {
-    console.log('截圖完成:', imageData.substring(0, 50) + '...')
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -102,7 +97,6 @@ export const ResponsiveHomePage: React.FC = () => {
             channel={selectedChannel}
             onError={handlePlayerError}
             onPlayerReady={handlePlayerReady}
-            onSnapshot={handleSnapshot}
           />
         </div>
       )}
