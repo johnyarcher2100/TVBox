@@ -15,14 +15,12 @@ interface EnhancedPlayerProps {
   channel: Channel | null
   onError?: (error: string) => void
   onPlayerReady?: () => void
-  onSnapshot?: (imageData: string) => void
 }
 
 export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({ 
   channel, 
   onError,
-  onPlayerReady,
-  onSnapshot
+  onPlayerReady
 }) => {
   const videoElementRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)

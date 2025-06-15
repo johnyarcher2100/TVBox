@@ -15,14 +15,12 @@ interface SuperPlayerProps {
   channel: Channel | null
   onError?: (error: string) => void
   onPlayerReady?: () => void
-  onSnapshot?: (imageData: string) => void
 }
 
 export const SuperEnhancedPlayer: React.FC<SuperPlayerProps> = ({ 
   channel, 
   onError,
-  onPlayerReady,
-  onSnapshot
+  onPlayerReady
 }) => {
   const videoElementRef = useRef<HTMLVideoElement>(null)
   const playerInstanceRef = useRef<any>(null)
