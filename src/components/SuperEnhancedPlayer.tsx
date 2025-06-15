@@ -11,21 +11,23 @@ declare global {
   }
 }
 
-interface EnhancedPlayerProps {
+interface SuperPlayerProps {
   channel: Channel | null
   onError?: (error: string) => void
   onPlayerReady?: () => void
   onSnapshot?: (imageData: string) => void
 }
 
-export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({ 
+export const SuperEnhancedPlayer: React.FC<SuperPlayerProps> = ({ 
   channel, 
   onError,
   onPlayerReady,
   onSnapshot
 }) => {
   const videoElementRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const playerInstanceRef = useRef<any>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const isMountedRef = useRef(true)
   
   const [currentDecoder, setCurrentDecoder] = useState<string>('none')
   const [isLoading, setIsLoading] = useState(false)
@@ -34,6 +36,13 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected')
   const [isYouTubeVideo, setIsYouTubeVideo] = useState(false)
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null)
+
+  // 安全的狀態更新函數
+  const safeSetState = useCallback((updateFn: () => void) => {
+    if (isMountedRef.current) {
+      updateFn()
+    }
+  }, [])
 
   // 動態載入播放器腳本
   const loadPlayerScripts = useCallback(async () => {
@@ -56,57 +65,102 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     ]
 
     for (const script of scripts) {
+      if (!isMountedRef.current) return // 檢查組件是否還掛載
       if (script.check()) continue
       
       try {
-        await new Promise((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
+          if (!isMountedRef.current) {
+            reject(new Error('Component unmounted'))
+            return
+          }
+
           const scriptElement = document.createElement('script')
           scriptElement.src = script.url
           scriptElement.async = true
-          scriptElement.onload = resolve
-          scriptElement.onerror = reject
+          
+          const handleLoad = () => {
+            cleanup()
+            if (isMountedRef.current) {
+              resolve()
+            }
+          }
+          
+          const handleError = () => {
+            cleanup()
+            reject(new Error(`Failed to load ${script.name}`))
+          }
+          
+          const cleanup = () => {
+            scriptElement.removeEventListener('load', handleLoad)
+            scriptElement.removeEventListener('error', handleError)
+          }
+          
+          scriptElement.addEventListener('load', handleLoad)
+          scriptElement.addEventListener('error', handleError)
+          
           document.head.appendChild(scriptElement)
         })
-        console.log(`✅ ${script.name} 載入成功`)
+        
+        if (isMountedRef.current) {
+          console.log(`✅ ${script.name} 載入成功`)
+        }
       } catch (error) {
-        console.warn(`⚠️ ${script.name} 載入失敗:`, error)
+        if (isMountedRef.current) {
+          console.warn(`⚠️ ${script.name} 載入失敗:`, error)
+        }
       }
     }
   }, [])
 
   // 檢測支援的解碼器
   const detectSupportedDecoders = useCallback(async () => {
-    await loadPlayerScripts()
-    
-    const decoders: string[] = []
-    
-    if (typeof window.Hls !== 'undefined') decoders.push('hls')
-    if (typeof window.flvjs !== 'undefined') decoders.push('flvjs')
-    if (typeof window.mpegts !== 'undefined') decoders.push('mpegts')
-    if (typeof window.EasyPlayerPro === 'function') decoders.push('easyplayer')
-    
-    // WebCodec 檢測
-    if ('VideoDecoder' in window && 'VideoEncoder' in window) {
-      try {
-        const config = { codec: 'avc1.42E01E' }
-        const support = await VideoDecoder.isConfigSupported(config)
-        if (support.supported) decoders.push('webcodec')
-      } catch (e) {
-        console.warn('WebCodec 檢測失敗:', e)
+    try {
+      await loadPlayerScripts()
+      
+      if (!isMountedRef.current) return []
+      
+      const decoders: string[] = []
+      
+      if (typeof window.Hls !== 'undefined') decoders.push('hls')
+      if (typeof window.flvjs !== 'undefined') decoders.push('flvjs')
+      if (typeof window.mpegts !== 'undefined') decoders.push('mpegts')
+      if (typeof window.EasyPlayerPro === 'function') decoders.push('easyplayer')
+      
+      // WebCodec 檢測
+      if ('VideoDecoder' in window && 'VideoEncoder' in window) {
+        try {
+          const config = { codec: 'avc1.42E01E' }
+          const support = await VideoDecoder.isConfigSupported(config)
+          if (support.supported && isMountedRef.current) {
+            decoders.push('webcodec')
+          }
+        } catch (e) {
+          console.warn('WebCodec 檢測失敗:', e)
+        }
       }
+      
+      // WASM 檢測
+      if (typeof WebAssembly !== 'undefined') decoders.push('wasm')
+      
+      // MSE 檢測
+      if ('MediaSource' in window) decoders.push('mse')
+      
+      decoders.push('native')
+      
+      if (isMountedRef.current) {
+        console.log('🎯 檢測到的解碼器:', decoders)
+        setSupportedDecoders(decoders)
+      }
+      
+      return decoders
+    } catch (error) {
+      if (isMountedRef.current) {
+        console.error('檢測解碼器失敗:', error)
+        setSupportedDecoders(['native']) // 至少保證原生播放器可用
+      }
+      return ['native']
     }
-    
-    // WASM 檢測
-    if (typeof WebAssembly !== 'undefined') decoders.push('wasm')
-    
-    // MSE 檢測
-    if ('MediaSource' in window) decoders.push('mse')
-    
-    decoders.push('native')
-    
-    console.log('🎯 檢測到的解碼器:', decoders)
-    setSupportedDecoders(decoders)
-    return decoders
   }, [loadPlayerScripts])
 
   // 檢測 YouTube 視頻
@@ -159,13 +213,17 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     // YouTube 檢測
     const youtubeInfo = detectYouTubeVideo(url)
     if (youtubeInfo.isYouTube) {
-      setIsYouTubeVideo(true)
-      setYoutubeVideoId(youtubeInfo.videoId)
+      safeSetState(() => {
+        setIsYouTubeVideo(true)
+        setYoutubeVideoId(youtubeInfo.videoId)
+      })
       return { format: 'youtube', preferredDecoders: ['youtube'] }
     }
 
-    setIsYouTubeVideo(false)
-    setYoutubeVideoId(null)
+    safeSetState(() => {
+      setIsYouTubeVideo(false)
+      setYoutubeVideoId(null)
+    })
     
     // 格式檢測與最佳解碼器匹配
     if (urlLower.includes('.m3u8')) {
@@ -190,8 +248,16 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
     if (!window.Hls) throw new Error('HLS.js 不可用')
     
     return new Promise((resolve, reject) => {
+      if (!isMountedRef.current) {
+        reject(new Error('Component unmounted'))
+        return
+      }
+
       const video = videoElementRef.current
-      if (!video) throw new Error('視頻元素不可用')
+      if (!video) {
+        reject(new Error('視頻元素不可用'))
+        return
+      }
       
       if (window.Hls.isSupported()) {
         const hls = new window.Hls({
@@ -205,29 +271,44 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
         hls.attachMedia(video)
         
         hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-          setCurrentDecoder('hls')
-          setConnectionStatus('connected')
-          setIsLoading(false)
-          video.play()
-          resolve()
-          onPlayerReady?.()
+          if (!isMountedRef.current) return
+          
+          safeSetState(() => {
+            setCurrentDecoder('hls')
+            setConnectionStatus('connected')
+            setIsLoading(false)
+          })
+          
+          video.play().then(() => {
+            if (isMountedRef.current) {
+              resolve()
+              onPlayerReady?.()
+            }
+          }).catch(reject)
         })
         
         hls.on(window.Hls.Events.ERROR, (_: any, data: any) => {
-          if (data.fatal) {
-            setConnectionStatus('disconnected')
+          if (data.fatal && isMountedRef.current) {
+            safeSetState(() => setConnectionStatus('disconnected'))
             reject(new Error(`HLS 錯誤: ${data.details}`))
           }
         })
         
+        playerInstanceRef.current = hls
+        
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url
-        video.play()
-        setCurrentDecoder('hls-native')
-        setConnectionStatus('connected')
-        setIsLoading(false)
-        resolve()
-        onPlayerReady?.()
+        video.play().then(() => {
+          if (isMountedRef.current) {
+            safeSetState(() => {
+              setCurrentDecoder('hls-native')
+              setConnectionStatus('connected')
+              setIsLoading(false)
+            })
+            resolve()
+            onPlayerReady?.()
+          }
+        }).catch(reject)
       } else {
         reject(new Error('HLS 不被支援'))
       }
@@ -237,8 +318,16 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
   // 原生播放器初始化
   const initNative = async (url: string): Promise<void> => {
     return new Promise((resolve, reject) => {
+      if (!isMountedRef.current) {
+        reject(new Error('Component unmounted'))
+        return
+      }
+
       const video = videoElementRef.current
-      if (!video) throw new Error('視頻元素不可用')
+      if (!video) {
+        reject(new Error('視頻元素不可用'))
+        return
+      }
       
       video.src = url
       video.autoplay = true
@@ -246,20 +335,29 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       video.muted = false
       
       const handleCanPlay = () => {
-        setCurrentDecoder('native')
-        setConnectionStatus('connected')
-        setIsLoading(false)
-        video.removeEventListener('canplay', handleCanPlay)
-        video.removeEventListener('error', handleError)
+        if (!isMountedRef.current) return
+        
+        cleanup()
+        safeSetState(() => {
+          setCurrentDecoder('native')
+          setConnectionStatus('connected')
+          setIsLoading(false)
+        })
         resolve()
         onPlayerReady?.()
       }
       
       const handleError = (e: any) => {
-        setConnectionStatus('disconnected')
+        if (!isMountedRef.current) return
+        
+        cleanup()
+        safeSetState(() => setConnectionStatus('disconnected'))
+        reject(new Error(`原生播放器錯誤: ${e.message || '未知錯誤'}`))
+      }
+      
+      const cleanup = () => {
         video.removeEventListener('canplay', handleCanPlay)
         video.removeEventListener('error', handleError)
-        reject(new Error(`原生播放器錯誤: ${e.message || '未知錯誤'}`))
       }
       
       video.addEventListener('canplay', handleCanPlay)
@@ -270,6 +368,23 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
 
   // 清理播放器
   const cleanupPlayers = useCallback(() => {
+    // 中止當前的異步操作
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+
+    if (playerInstanceRef.current) {
+      try {
+        if (playerInstanceRef.current.destroy) {
+          playerInstanceRef.current.destroy()
+        }
+        playerInstanceRef.current = null
+      } catch (e) {
+        console.warn('清理播放器時出錯:', e)
+      }
+    }
+    
     if (videoElementRef.current) {
       const video = videoElementRef.current
       video.pause()
@@ -277,74 +392,109 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       video.load()
     }
     
-    setCurrentDecoder('none')
-    setConnectionStatus('disconnected')
-    setError(null)
+    if (isMountedRef.current) {
+      setCurrentDecoder('none')
+      setConnectionStatus('disconnected')
+      setError(null)
+    }
   }, [])
 
   // 主播放函數
   const playMedia = useCallback(async (url: string) => {
-    if (!url) return
+    if (!url || !isMountedRef.current) return
     
-    setIsLoading(true)
-    setError(null)
-    setConnectionStatus('connecting')
+    // 創建新的 AbortController
+    abortControllerRef.current = new AbortController()
+    
+    safeSetState(() => {
+      setIsLoading(true)
+      setError(null)
+      setConnectionStatus('connecting')
+    })
     
     cleanupPlayers()
     
-    const mediaInfo = detectMediaInfo(url)
-    
-    // YouTube 特殊處理
-    if (mediaInfo.format === 'youtube') {
-      setCurrentDecoder('youtube')
-      setIsLoading(false)
-      onPlayerReady?.()
-      return
-    }
-    
-    // 獲取適用的解碼器
-    const applicableDecoders = mediaInfo.preferredDecoders.filter(decoder => 
-      supportedDecoders.includes(decoder)
-    )
-    
-    console.log('🎯 嘗試解碼器順序:', applicableDecoders)
-    
-    // 逐個嘗試解碼器
-    for (const decoder of applicableDecoders) {
-      try {
-        console.log(`🚀 嘗試使用 ${decoder} 播放:`, url)
-        
-        switch (decoder) {
-          case 'hls':
-            await initHLS(url)
-            return
-          case 'native':
-            await initNative(url)
-            return
+    try {
+      const mediaInfo = detectMediaInfo(url)
+      
+      // YouTube 特殊處理
+      if (mediaInfo.format === 'youtube') {
+        safeSetState(() => {
+          setCurrentDecoder('youtube')
+          setIsLoading(false)
+        })
+        onPlayerReady?.()
+        return
+      }
+      
+      // 獲取適用的解碼器
+      const applicableDecoders = mediaInfo.preferredDecoders.filter(decoder => 
+        supportedDecoders.includes(decoder)
+      )
+      
+      console.log('🎯 嘗試解碼器順序:', applicableDecoders)
+      
+      // 逐個嘗試解碼器
+      for (const decoder of applicableDecoders) {
+        if (!isMountedRef.current || abortControllerRef.current?.signal.aborted) {
+          return
         }
-        
-      } catch (error) {
-        console.warn(`❌ ${decoder} 播放失敗:`, error)
-        continue
+
+        try {
+          console.log(`🚀 嘗試使用 ${decoder} 播放:`, url)
+          
+          switch (decoder) {
+            case 'hls':
+              await initHLS(url)
+              return
+            case 'native':
+              await initNative(url)
+              return
+          }
+          
+        } catch (error) {
+          console.warn(`❌ ${decoder} 播放失敗:`, error)
+          continue
+        }
+      }
+      
+      // 所有解碼器都失敗
+      if (isMountedRef.current) {
+        safeSetState(() => {
+          setError('所有播放器都無法播放此媒體')
+          setIsLoading(false)
+          setConnectionStatus('disconnected')
+        })
+        onError?.('所有播放器都無法播放此媒體')
+      }
+      
+    } catch (error) {
+      if (isMountedRef.current && !abortControllerRef.current?.signal.aborted) {
+        console.error('播放媒體時發生錯誤:', error)
+        safeSetState(() => {
+          setError('播放器初始化失敗')
+          setIsLoading(false)
+          setConnectionStatus('disconnected')
+        })
+        onError?.('播放器初始化失敗')
       }
     }
     
-    // 所有解碼器都失敗
-    setError('所有播放器都無法播放此媒體')
-    setIsLoading(false)
-    setConnectionStatus('disconnected')
-    onError?.('所有播放器都無法播放此媒體')
-    
-  }, [supportedDecoders, cleanupPlayers, onPlayerReady, onError])
+  }, [supportedDecoders, cleanupPlayers, onPlayerReady, onError, safeSetState])
 
   // 初始化
   useEffect(() => {
+    isMountedRef.current = true
     detectSupportedDecoders()
+    
+    return () => {
+      isMountedRef.current = false
+    }
   }, [detectSupportedDecoders])
 
   // 播放頻道
   useEffect(() => {
-    if (channel?.url && supportedDecoders.length > 0) {
+    if (channel?.url && supportedDecoders.length > 0 && isMountedRef.current) {
       playMedia(channel.url)
     }
   }, [channel?.url, supportedDecoders, playMedia])
@@ -352,6 +502,7 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
   // 清理
   useEffect(() => {
     return () => {
+      isMountedRef.current = false
       cleanupPlayers()
     }
   }, [cleanupPlayers])
@@ -380,9 +531,6 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
         />
       )}
       
-      {/* 隱藏的畫布用於截圖 */}
-      <canvas ref={canvasRef} className="hidden" />
-      
       {/* 載入指示器 */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 z-10">
@@ -390,6 +538,7 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mb-4 mx-auto"></div>
             <p className="text-lg mb-2">正在載入播放器...</p>
             <p className="text-sm text-gray-300">解碼器: {currentDecoder}</p>
+            <p className="text-xs text-gray-400 mt-1">狀態: {connectionStatus}</p>
           </div>
         </div>
       )}
@@ -401,9 +550,15 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
           <p className="text-sm mb-3">{error}</p>
           <button
             onClick={() => channel?.url && playMedia(channel.url)}
-            className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
+            className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm mr-2"
           >
             重試
+          </button>
+          <button
+            onClick={() => safeSetState(() => setError(null))}
+            className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm"
+          >
+            關閉
           </button>
         </div>
       )}
@@ -422,4 +577,4 @@ export const EnhancedPlayer: React.FC<EnhancedPlayerProps> = ({
       )}
     </div>
   )
-}
+} 

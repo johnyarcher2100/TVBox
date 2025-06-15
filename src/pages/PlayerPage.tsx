@@ -324,11 +324,7 @@ const PlayerPage: React.FC = () => {
     setError(null)
   }, [])
 
-  // 使用 useMemo 穩定 config 對象，避免播放器不必要的重新初始化
-  const playerConfig = useMemo(() => ({
-    debug: true,
-    preferredDecoder: 'easyplayer' as const
-  }), [])
+
 
   // 使用 useMemo 穩定側邊欄樣式對象
   const sidebarStyle = useMemo(() => ({
@@ -369,7 +365,6 @@ const PlayerPage: React.FC = () => {
           channel={currentChannel}
           onError={handlePlayerError}
           onPlayerReady={handlePlayerReady}
-          config={playerConfig}
         />
       </div>
 

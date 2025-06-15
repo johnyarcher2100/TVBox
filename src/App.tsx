@@ -4,6 +4,7 @@ import PlayerPage from './pages/PlayerPage'
 import AdminPage from './pages/AdminPage'
 import DiagnosticPage from './pages/DiagnosticPage'
 import BroadcastManagePage from './pages/BroadcastManagePage'
+import TestPage from './pages/TestPage'
 import LoginModal from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 
@@ -59,6 +60,10 @@ function App() {
                 <Navigate to="/" replace />
               )
             } 
+          />
+          <Route 
+            path="/test" 
+            element={<TestPage />} 
           />
         </Routes>
       </Router>
