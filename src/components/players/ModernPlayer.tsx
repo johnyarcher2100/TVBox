@@ -93,22 +93,12 @@ export const ModernPlayer: React.FC<ModernPlayerProps> = ({
     <div className="w-full h-full relative">
       {renderPlayer()}
       
-      {/* 播放器狀態指示器 - 僅在出錯時顯示 */}
-      {playerState.playbackError && (
-        <div className="absolute top-4 left-4 glass px-3 py-1 rounded-lg text-white text-sm">
-          <span className="opacity-75">
-            {testMode ? '測試模式' : (browserType === 'chrome' ? 'Chrome專用' : '標準')} 播放器
-          </span>
-          <span className="text-red-400 ml-2">⚠</span>
-        </div>
-      )}
-      
       {/* 測試模式切換按鈕 - 僅在出錯時顯示 */}
       {playerState.playbackError && (
-        <div className="absolute top-4 right-4 space-x-2">
+        <div className="absolute bottom-4 right-4 space-x-2">
           <button
             onClick={() => setTestMode(!testMode)}
-            className="glass px-3 py-1 rounded-lg text-white text-sm hover:bg-white/20 transition-colors"
+            className="bg-black/80 px-2 py-1 rounded text-white text-xs hover:bg-black/90 transition-colors"
           >
             {testMode ? '退出測試' : '診斷模式'}
           </button>

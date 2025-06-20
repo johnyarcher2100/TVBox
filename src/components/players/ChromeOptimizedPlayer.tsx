@@ -528,39 +528,25 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
       )}
       
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-white">
-          <div className="text-center max-w-md p-6">
-            <div className="text-red-400 text-4xl mb-4">⚠</div>
-            <h3 className="text-lg font-bold mb-4">播放失敗</h3>
-            <p className="text-sm mb-4 opacity-75">無法播放此頻道，請嘗試其他解決方案</p>
-            
-            <div className="space-y-2">
-              <button
-                onClick={handleRetry}
-                disabled={retryCount >= maxRetries}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded-lg transition-colors"
-              >
-                {retryCount >= maxRetries ? '已達最大重試次數' : '重試播放'}
-              </button>
-              
-              <button
-                onClick={handleOpenInVLC}
-                className="w-full bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg transition-colors text-sm"
-              >
-                用 VLC 播放器開啟
-              </button>
-              
-              <button
-                onClick={() => window.open('https://www.mozilla.org/firefox/', '_blank')}
-                className="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors text-sm"
-              >
-                下載 Firefox 瀏覽器
-              </button>
-            </div>
-            
-            <div className="mt-4 text-xs opacity-50">
-              <p>建議: 使用 Firefox 瀏覽器或 VLC 播放器以獲得最佳播放體驗</p>
-            </div>
+        <div className="absolute top-4 right-4 bg-black/80 text-white p-3 rounded-lg max-w-xs z-10">
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="text-red-400 text-sm">⚠</div>
+            <span className="text-xs">播放錯誤</span>
+          </div>
+          <div className="space-y-1">
+            <button
+              onClick={handleRetry}
+              disabled={retryCount >= maxRetries}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-2 py-1 rounded text-xs transition-colors"
+            >
+              重試
+            </button>
+            <button
+              onClick={handleOpenInVLC}
+              className="w-full bg-orange-600 hover:bg-orange-700 px-2 py-1 rounded text-xs transition-colors"
+            >
+              VLC 開啟
+            </button>
           </div>
         </div>
       )}

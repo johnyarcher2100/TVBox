@@ -181,52 +181,38 @@ export const SimpleTestPlayer: React.FC<SimpleTestPlayerProps> = ({
       />
       
       {(isLoading || error) && (
-        <div className="absolute inset-0 bg-black/90 text-white p-4 overflow-auto">
-          <div className="max-w-2xl mx-auto">
-            <h3 className="text-xl font-bold mb-4">
-              {isLoading ? '診斷中...' : '診斷結果'}
-            </h3>
+        <div className="absolute top-4 left-4 bg-black/90 text-white p-3 rounded-lg max-w-sm max-h-96 overflow-auto z-10">
+          <h3 className="text-sm font-bold mb-2">
+            {isLoading ? '診斷中...' : '診斷結果'}
+          </h3>
+          
+          <div className="bg-gray-900 p-2 rounded text-xs font-mono max-h-48 overflow-auto">
+            {testResults.slice(-10).map((result, index) => (
+              <div key={index} className={`
+                ${result.startsWith('✓') ? 'text-green-400' : 
+                  result.startsWith('✗') ? 'text-red-400' : 
+                  result.startsWith('\n') ? 'text-yellow-400' : 
+                  'text-gray-300'}
+              `}>
+                {result.replace('\n', '')}
+              </div>
+            ))}
             
-            <div className="bg-gray-900 p-4 rounded-lg font-mono text-sm">
-              {testResults.map((result, index) => (
-                <div key={index} className={`
-                  ${result.startsWith('✓') ? 'text-green-400' : 
-                    result.startsWith('✗') ? 'text-red-400' : 
-                    result.startsWith('\n') ? 'text-yellow-400 mt-2' : 
-                    'text-gray-300'}
-                `}>
-                  {result}
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="text-blue-400 animate-pulse">
-                  正在分析播放問題...
-                </div>
-              )}
-            </div>
-            
-            {error && (
-              <div className="mt-4 space-y-2">
-                <button
-                  onClick={handleRetry}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
-                >
-                  重新診斷
-                </button>
-                
-                <div className="text-sm opacity-75">
-                  <p>建議解決方案：</p>
-                  <ul className="list-disc ml-4 mt-2">
-                    <li>檢查網路連接</li>
-                    <li>確認 URL 是否有效</li>
-                    <li>嘗試使用 Firefox 瀏覽器</li>
-                    <li>使用 VLC 等外部播放器</li>
-                  </ul>
-                </div>
+            {isLoading && (
+              <div className="text-blue-400 animate-pulse">
+                分析中...
               </div>
             )}
           </div>
+          
+          {error && (
+            <button
+              onClick={handleRetry}
+              className="w-full mt-2 bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs transition-colors"
+            >
+              重新診斷
+            </button>
+          )}
         </div>
       )}
     </div>
