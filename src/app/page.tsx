@@ -41,6 +41,7 @@ export default function HomePage() {
   const [currentBroadcast, setCurrentBroadcast] = useState<BroadcastMessage | null>(null);
   const [userRatingLoading, setUserRatingLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [showRatingButtons, setShowRatingButtons] = useState(false);
 
   // 客戶端初始化
   useEffect(() => {
@@ -203,6 +204,10 @@ export default function HomePage() {
         setCurrentChannel(null);
       } else {
         alert(`評分成功！新評分: ${newRating}`);
+        // 評分成功後自動收起評分按鈕
+        setTimeout(() => {
+          setShowRatingButtons(false);
+        }, 2000);
       }
     } catch (error) {
       alert('評分失敗: ' + (error as Error).message);
@@ -383,7 +388,7 @@ export default function HomePage() {
             
             {/* 推播圖示 */}
             {currentBroadcast && currentBroadcast.message_type === 'icon' && (
-              <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/80 p-2 sm:p-4 rounded-lg">
+              <div className="absolute right-2 sm:right-4 top-1/4 transform -translate-y-1/2 bg-black/80 p-2 sm:p-4 rounded-lg">
                 <div className="text-white text-center text-sm sm:text-base">
                   {currentBroadcast.content}
                 </div>
@@ -391,21 +396,35 @@ export default function HomePage() {
             )}
             
             {/* 評分按鈕區域 */}
-            <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 space-y-2 sm:space-y-4">
+            <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2">
+              {/* 評分切換按鈕 */}
               <button
-                onClick={() => handleRating('like')}
-                disabled={userRatingLoading}
-                className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
+                onClick={() => setShowRatingButtons(!showRatingButtons)}
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center transition-all duration-300 mb-2"
+                title={showRatingButtons ? '隱藏評分' : '顯示評分'}
               >
-                👍
+                {showRatingButtons ? '✕' : '⭐'}
               </button>
-              <button
-                onClick={() => handleRating('dislike')}
-                disabled={userRatingLoading}
-                className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
-              >
-                👎
-              </button>
+              
+              {/* 評分按鈕（可收起） */}
+              <div className={`space-y-2 sm:space-y-3 transition-all duration-300 ${
+                showRatingButtons ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform translate-x-full pointer-events-none'
+              }`}>
+                <button
+                  onClick={() => handleRating('like')}
+                  disabled={userRatingLoading}
+                  className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
+                >
+                  👍
+                </button>
+                <button
+                  onClick={() => handleRating('dislike')}
+                  disabled={userRatingLoading}
+                  className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
+                >
+                  👎
+                </button>
+              </div>
             </div>
             
             {/* 控制按鈕 */}
