@@ -230,12 +230,12 @@ export default function HomePage() {
                 }}
               />
             ) : (
-              <div className="channel-icon bg-gray-600 flex items-center justify-center text-white text-lg font-bold">
+              <div className="channel-icon bg-gray-600 flex items-center justify-center text-white text-xs sm:text-sm font-bold">
                 {channel.name.charAt(0).toUpperCase()}
               </div>
             )}
             <span className="channel-name">{channel.name}</span>
-            <div className="text-xs text-yellow-400 mt-1">
+            <div className="channel-rating">
               ⭐ {channel.rating}
             </div>
           </div>
@@ -247,18 +247,18 @@ export default function HomePage() {
   const renderSidebar = () => {
     return (
       <div className={`
-        fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 ease-in-out
+        fixed left-0 top-0 h-full w-72 sm:w-80 z-50 transform transition-transform duration-300 ease-in-out
         ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
         backdrop-blur-sm border-r border-white/20
       `} 
       style={{ backgroundColor: `rgba(0, 0, 0, ${sidebarTransparency / 100})` }}>
         <div className="h-full overflow-y-auto">
-          <div className="p-4 border-b border-white/20">
+          <div className="p-3 sm:p-4 border-b border-white/20">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-white font-semibold">頻道列表</h3>
+              <h3 className="text-white font-semibold text-sm sm:text-base">頻道列表</h3>
               <button
                 onClick={() => setShowSidebar(false)}
-                className="text-white/60 hover:text-white"
+                className="text-white/60 hover:text-white text-lg sm:text-xl"
               >
                 ✕
               </button>
@@ -274,34 +274,34 @@ export default function HomePage() {
             <span className="text-xs text-white/60">透明度: {sidebarTransparency}%</span>
           </div>
           
-          <div className="p-2 space-y-2">
+          <div className="p-1.5 sm:p-2 space-y-1.5 sm:space-y-2">
             {channels.map((channel) => (
               <div
                 key={channel.id}
                 onClick={() => handleChannelSelect(channel)}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors ${
                   currentChannel?.id === channel.id
                     ? 'bg-blue-600/80'
                     : 'bg-white/10 hover:bg-white/20'
                 }`}
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 sm:space-x-3">
                   {channel.logo ? (
                     <img 
                       src={channel.logo} 
                       alt={channel.name}
-                      className="w-8 h-8 rounded object-cover"
+                      className="w-6 h-6 sm:w-8 sm:h-8 rounded object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center text-white text-xs">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-600 rounded flex items-center justify-center text-white text-xs">
                       {channel.name.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-white text-sm font-medium truncate">
+                    <div className="text-white text-xs sm:text-sm font-medium truncate">
                       {channel.name}
                     </div>
                     <div className="text-yellow-400 text-xs">
@@ -335,22 +335,22 @@ export default function HomePage() {
 
   if (showActivation) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="glass max-w-md w-full p-8 rounded-2xl">
-          <h1 className="text-2xl font-bold text-white text-center mb-6">
+      <div className="min-h-screen flex items-center justify-center p-3 sm:p-4">
+        <div className="glass max-w-md w-full mobile-section rounded-xl">
+          <h1 className="mobile-title font-bold text-white text-center">
             阿布吉播放器
           </h1>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <input
               type="text"
               placeholder="請輸入啟動碼 (可選)"
               value={activationCode}
               onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
-              className="w-full px-4 py-3 rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20"
+              className="w-full mobile-input rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20"
             />
             <button
               onClick={handleActivationSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium mobile-button rounded-lg transition-colors"
             >
               {activationCode ? '驗證啟動碼' : '免費進入'}
             </button>
@@ -374,8 +374,8 @@ export default function HomePage() {
             
             {/* 推播訊息跑馬燈 */}
             {currentBroadcast && currentBroadcast.message_type === 'text' && (
-              <div className="absolute top-4 right-4 bg-black/80 text-white px-4 py-2 rounded-lg max-w-md overflow-hidden">
-                <div className="marquee">
+              <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-black/80 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg max-w-xs sm:max-w-md overflow-hidden">
+                <div className="marquee text-xs sm:text-sm">
                   {currentBroadcast.content}
                 </div>
               </div>
@@ -383,49 +383,49 @@ export default function HomePage() {
             
             {/* 推播圖示 */}
             {currentBroadcast && currentBroadcast.message_type === 'icon' && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/80 p-4 rounded-lg">
-                <div className="text-white text-center">
+              <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/80 p-2 sm:p-4 rounded-lg">
+                <div className="text-white text-center text-sm sm:text-base">
                   {currentBroadcast.content}
                 </div>
               </div>
             )}
             
             {/* 評分按鈕區域 */}
-            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 space-y-4">
+            <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 space-y-2 sm:space-y-4">
               <button
                 onClick={() => handleRating('like')}
                 disabled={userRatingLoading}
-                className="w-12 h-12 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors"
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
               >
                 👍
               </button>
               <button
                 onClick={() => handleRating('dislike')}
                 disabled={userRatingLoading}
-                className="w-12 h-12 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors"
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
               >
                 👎
               </button>
             </div>
             
             {/* 控制按鈕 */}
-            <div className="absolute bottom-4 left-4 flex space-x-2">
+            <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
               <button
                 onClick={() => setCurrentChannel(null)}
-                className="bg-black/80 text-white px-4 py-2 rounded-lg hover:bg-black transition-colors"
+                className="bg-black/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-black transition-colors text-xs sm:text-sm"
               >
                 返回首頁
               </button>
               <button
                 onClick={() => setShowSidebar(true)}
-                className="bg-black/80 text-white px-4 py-2 rounded-lg hover:bg-black transition-colors"
+                className="bg-black/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-black transition-colors text-xs sm:text-sm"
               >
                 選擇頻道
               </button>
               {userSession && userSession.user_level === 3 && (
                 <button
                   onClick={() => router.push('/management')}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm"
                 >
                   管理面板
                 </button>
@@ -438,20 +438,20 @@ export default function HomePage() {
         </div>
       ) : (
         /* 首頁模式 */
-        <div className="p-4">
+        <div className="p-2 sm:p-4">
           <div className="max-w-7xl mx-auto">
             {/* 標題區域 */}
-            <header className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-white mb-2">阿布吉播放器</h1>
-              <p className="text-white/80">最佳播放清單 • 多平台支援</p>
-              <div className="mt-2 text-sm text-yellow-400">
+            <header className="text-center mobile-subtitle">
+              <h1 className="mobile-title font-bold text-white">阿布吉播放器</h1>
+              <p className="text-white/80 text-xs sm:text-base mb-2">最佳播放清單 • 多平台支援</p>
+              <div className="text-xs sm:text-sm text-yellow-400">
                 {userSession ? (
                   <>
                     用戶等級: {userSession.user_level} 
                     {userSession.user_level === 3 && (
                       <button
                         onClick={() => router.push('/management')}
-                        className="ml-4 bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-white text-xs"
+                        className="ml-2 sm:ml-4 bg-purple-600 hover:bg-purple-700 px-2 py-1 rounded text-white text-xs"
                       >
                         管理頁面
                       </button>
@@ -464,20 +464,20 @@ export default function HomePage() {
             </header>
 
             {/* 自定義播放清單輸入 */}
-            <div className="glass p-6 rounded-2xl mb-8">
-              <h2 className="text-xl font-semibold text-white mb-4">載入自定義播放清單</h2>
-              <div className="flex gap-4">
+            <div className="glass mobile-section rounded-xl">
+              <h2 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">載入自定義播放清單</h2>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <input
                   type="url"
                   placeholder="輸入播放清單 URL (支援 m3u, m3u8, json, txt)"
                   value={playlistUrl}
                   onChange={(e) => setPlaylistUrl(e.target.value)}
-                  className="flex-1 px-4 py-3 rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20"
+                  className="flex-1 mobile-input rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20"
                 />
                 <button
                   onClick={handlePlaylistLoad}
                   disabled={isLoading || !playlistUrl.trim()}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-medium mobile-button rounded-lg transition-colors whitespace-nowrap"
                 >
                   {isLoading ? '載入中...' : '載入播放'}
                 </button>
@@ -485,34 +485,34 @@ export default function HomePage() {
             </div>
 
             {/* 阿布吉節目單 */}
-            <div className="glass p-6 rounded-2xl">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-white">阿布吉節目單</h2>
+            <div className="glass mobile-section rounded-xl">
+              <div className="flex justify-between items-center mb-3 sm:mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-white">阿布吉節目單</h2>
                 <button
                   onClick={loadAbujiChannels}
                   disabled={isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white mobile-button rounded-lg transition-colors"
                 >
                   {isLoading ? '載入中...' : '重新載入'}
                 </button>
               </div>
               
               {isLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-white/80">載入頻道中...</p>
+                <div className="text-center py-8 sm:py-12">
+                  <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-3 sm:mb-4"></div>
+                  <p className="text-white/80 text-sm sm:text-base">載入頻道中...</p>
                 </div>
               ) : channels.length > 0 ? (
                 <div>
-                  <p className="text-white/60 mb-4">點擊頻道開始觀看</p>
+                  <p className="text-white/60 mb-2 sm:mb-4 text-xs sm:text-sm">點擊頻道開始觀看</p>
                   <div className="channel-container">
                     {renderChannelGrid()}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-12 text-white/60">
-                  <p>暫無可用頻道</p>
-                  <p className="text-sm mt-2">請載入自定義播放清單或稍後重試</p>
+                <div className="text-center py-8 sm:py-12 text-white/60">
+                  <p className="text-sm sm:text-base">暫無可用頻道</p>
+                  <p className="text-xs sm:text-sm mt-2">請載入自定義播放清單或稍後重試</p>
                 </div>
               )}
             </div>
