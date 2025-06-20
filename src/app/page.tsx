@@ -230,7 +230,7 @@ export default function HomePage() {
                 }}
               />
             ) : (
-              <div className="channel-icon bg-gray-600 flex items-center justify-center text-white text-xs sm:text-sm font-bold">
+              <div className="channel-icon bg-gray-600 flex items-center justify-center text-white text-sm sm:text-base font-bold">
                 {channel.name.charAt(0).toUpperCase()}
               </div>
             )}

@@ -18,20 +18,20 @@
   
   .channel-grid {
     @apply grid gap-2 p-2;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     @apply overflow-y-auto max-h-[50vh];
   }
   
   @media (min-width: 480px) {
     .channel-grid {
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       @apply gap-3 p-3 max-h-[55vh];
     }
   }
   
   @media (min-width: 640px) {
     .channel-grid {
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       @apply gap-4 p-4 max-h-[60vh];
     }
   }
@@ -87,12 +87,12 @@
   
   .channel-card {
     @apply relative flex flex-col items-center rounded-lg glass hover:bg-white/20 transition-all cursor-pointer;
-    @apply p-1.5 min-h-[85px];
+    @apply p-2 min-h-[100px];
   }
   
   @media (min-width: 480px) {
     .channel-card {
-      @apply p-2 min-h-[95px];
+      @apply p-2.5 min-h-[110px];
     }
   }
   
@@ -109,12 +109,12 @@
   }
   
   .channel-icon {
-    @apply w-10 h-10 rounded object-cover mb-1;
+    @apply w-12 h-12 rounded object-cover mb-1.5;
   }
   
   @media (min-width: 480px) {
     .channel-icon {
-      @apply w-12 h-12 mb-1.5;
+      @apply w-14 h-14 mb-2;
     }
   }
   
