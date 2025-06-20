@@ -54,7 +54,8 @@ export default function HomePage() {
           id: Date.now().toString(),
           activation_code: activationCode,
           user_level: codeData.user_level,
-          expires_at: codeData.expires_at
+          expires_at: codeData.expires_at,
+          created_at: new Date().toISOString()
         };
         
         await DatabaseOperations.saveUserSession(newSession);
