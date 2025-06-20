@@ -184,7 +184,7 @@ export const SimpleTestPlayer: React.FC<SimpleTestPlayerProps> = ({
         <div className="absolute inset-0 bg-black/90 text-white p-4 overflow-auto">
           <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-4">
-              {isLoading ? '播放測試進行中...' : '播放測試結果'}
+              {isLoading ? '診斷中...' : '診斷結果'}
             </h3>
             
             <div className="bg-gray-900 p-4 rounded-lg font-mono text-sm">
@@ -201,7 +201,7 @@ export const SimpleTestPlayer: React.FC<SimpleTestPlayerProps> = ({
               
               {isLoading && (
                 <div className="text-blue-400 animate-pulse">
-                  測試進行中...
+                  正在分析播放問題...
                 </div>
               )}
             </div>
@@ -212,7 +212,7 @@ export const SimpleTestPlayer: React.FC<SimpleTestPlayerProps> = ({
                   onClick={handleRetry}
                   className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
                 >
-                  重新測試
+                  重新診斷
                 </button>
                 
                 <div className="text-sm opacity-75">

@@ -75,11 +75,8 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
     setPlaybackInfo(null);
     
     try {
-      console.log('開始 Chrome 播放器初始化:', channel.name, channel.url);
-      
       // 1. 智能 URL 分析
       const urlAnalysis = analyzeUrl(channel.url);
-      console.log('URL 分析結果:', urlAnalysis);
       
       // 2. 嘗試最適合的播放方法
       if (urlAnalysis.isOptimal) {
@@ -91,9 +88,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
       }
       
       // 3. URL 可達性測試
-      console.log('進行 URL 可達性測試...');
       const accessTest = await CORSHandler.testUrlAccessibility(channel.url);
-      console.log('可達性測試結果:', accessTest);
       
       if (accessTest.accessible) {
         const success = await tryPlayWithUrl(accessTest.finalUrl, accessTest.method);
@@ -109,7 +104,6 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
       }
       
       // 4. 智能代理選擇
-      console.log('嘗試智能代理選擇...');
       const bestProxy = await CORSHandler.findBestProxy(channel.url);
       if (bestProxy) {
         const success = await tryPlayWithUrl(bestProxy.proxyUrl, `proxy-${bestProxy.index}`);
@@ -125,7 +119,6 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
       }
       
       // 5. 嘗試所有方法
-      console.log('嘗試所有可用方法...');
       await tryAllMethods();
       
     } catch (err) {
@@ -527,19 +520,9 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
       
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-white">
-          <div className="text-center max-w-md">
-            <div className="animate-spin w-12 h-12 border-4 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
-            <h3 className="text-xl font-bold mb-2">Chrome 專用播放器</h3>
-            <p className="text-sm mb-2 opacity-75">正在智能分析播放方式...</p>
-            <div className="text-xs opacity-50 space-y-1">
-              <p>當前方法: {currentMethod || '分析中'}</p>
-              {attempts.length > 0 && (
-                <p>已嘗試: {attempts.slice(-3).join(', ')}</p>
-              )}
-              {retryCount > 0 && (
-                <p>第 {retryCount + 1} 次嘗試</p>
-              )}
-            </div>
+          <div className="text-center">
+            <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-lg">載入中...</p>
           </div>
         </div>
       )}
@@ -549,18 +532,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
           <div className="text-center max-w-md p-6">
             <div className="text-red-400 text-4xl mb-4">⚠</div>
             <h3 className="text-lg font-bold mb-4">播放失敗</h3>
-            <p className="text-sm mb-4 opacity-75">{error}</p>
-            
-            {playbackInfo && (
-              <div className="text-xs opacity-50 mb-4 p-2 bg-white/10 rounded">
-                <p>播放信息:</p>
-                <p>方法: {playbackInfo.method}</p>
-                {playbackInfo.responseTime && (
-                  <p>響應時間: {playbackInfo.responseTime}ms</p>
-                )}
-                <p>代理: {playbackInfo.proxyUsed ? '是' : '否'}</p>
-              </div>
-            )}
+            <p className="text-sm mb-4 opacity-75">無法播放此頻道，請嘗試其他解決方案</p>
             
             <div className="space-y-2">
               <button
@@ -568,7 +540,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
                 disabled={retryCount >= maxRetries}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded-lg transition-colors"
               >
-                {retryCount >= maxRetries ? '已達最大重試次數' : `重試播放 (${retryCount}/${maxRetries})`}
+                {retryCount >= maxRetries ? '已達最大重試次數' : '重試播放'}
               </button>
               
               <button
@@ -593,15 +565,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
         </div>
       )}
       
-      {/* 播放信息顯示 */}
-      {playbackInfo && !isLoading && !error && (
-        <div className="absolute top-4 right-4 bg-black/70 text-white text-xs p-2 rounded">
-          <p>方法: {playbackInfo.method}</p>
-          {playbackInfo.responseTime && (
-            <p>延遲: {playbackInfo.responseTime}ms</p>
-          )}
-        </div>
-      )}
+
     </div>
   );
 };
