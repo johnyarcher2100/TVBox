@@ -41,6 +41,14 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
     };
   }, [channel]);
 
+  // 確保音量設為最大
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = 1.0;
+      videoRef.current.muted = false;
+    }
+  });
+
   const cleanup = useCallback(() => {
     if (hlsRef.current) {
       try {
@@ -263,17 +271,20 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
             }
           };
           
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            console.log('HLS manifest 解析成功');
-            videoRef.current?.play().then(() => {
-              console.log('HLS 播放開始');
-              onPlayerStateChange({ isPlaying: true, playbackError: undefined });
-              resolveOnce(true);
-            }).catch(e => {
-              console.error('HLS 播放失敗:', e);
-              resolveOnce(false);
-            });
+                  hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log('HLS manifest 解析成功');
+          if (videoRef.current) {
+            videoRef.current.volume = 1.0; // 設定音量為最大
+          }
+          videoRef.current?.play().then(() => {
+            console.log('HLS 播放開始');
+            onPlayerStateChange({ isPlaying: true, playbackError: undefined, volume: 100 });
+            resolveOnce(true);
+          }).catch(e => {
+            console.error('HLS 播放失敗:', e);
+            resolveOnce(false);
           });
+        });
           
           hls.on(Hls.Events.ERROR, (event, data) => {
             console.error('HLS 錯誤:', data);
@@ -423,9 +434,10 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
           
           const handleLoadedData = () => {
             console.log('原生播放器數據載入完成');
+            video.volume = 1.0; // 設定音量為最大
             video.play().then(() => {
               console.log('原生播放器播放開始');
-              onPlayerStateChange({ isPlaying: true, playbackError: undefined });
+              onPlayerStateChange({ isPlaying: true, playbackError: undefined, volume: 100 });
               resolveOnce(true);
             }).catch(e => {
               console.error('原生播放器播放失敗:', e);
@@ -501,7 +513,6 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
         className="w-full h-full object-contain"
         controls
         autoPlay
-        muted
         playsInline
         onPlay={() => onPlayerStateChange({ isPlaying: true })}
         onPause={() => onPlayerStateChange({ isPlaying: false })}

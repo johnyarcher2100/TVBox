@@ -27,6 +27,14 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
     };
   }, [channel]);
 
+  // 確保音量設為最大
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = 1.0;
+      videoRef.current.muted = false;
+    }
+  });
+
   const cleanup = () => {
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -72,8 +80,11 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
       hls.attachMedia(videoRef.current);
       
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (videoRef.current) {
+          videoRef.current.volume = 1.0; // 設定音量為最大
+        }
         videoRef.current?.play();
-        onPlayerStateChange({ isPlaying: true, playbackError: undefined });
+        onPlayerStateChange({ isPlaying: true, playbackError: undefined, volume: 100 });
       });
       
       hls.on(Hls.Events.ERROR, (event, data) => {
@@ -93,8 +104,9 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
       video.load();
       
       video.addEventListener('loadeddata', () => {
+        video.volume = 1.0; // 設定音量為最大
         video.play();
-        onPlayerStateChange({ isPlaying: true, playbackError: undefined });
+        onPlayerStateChange({ isPlaying: true, playbackError: undefined, volume: 100 });
       });
       
       video.addEventListener('error', () => {

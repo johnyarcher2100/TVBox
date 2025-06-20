@@ -35,7 +35,17 @@
   }
   
   .marquee {
-    @apply whitespace-nowrap animate-marquee;
+    @apply whitespace-nowrap;
+    animation: marquee 15s linear infinite;
+  }
+  
+  @keyframes marquee {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
   }
   
   .video-container {

@@ -4,7 +4,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Abuji IPTV 播放器',
+  title: '阿布吉播放器',
   description: '多平台IPTV串流播放器，支援多種協議和解碼方式',
 };
 
