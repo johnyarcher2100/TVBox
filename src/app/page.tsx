@@ -18,6 +18,7 @@ export default function HomePage() {
     currentChannel,
     setCurrentChannel,
     userSession,
+    initializeUserSession,
     broadcastMessages,
     setBroadcastMessages
   } = useStore();
@@ -25,7 +26,7 @@ export default function HomePage() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activationCode, setActivationCode] = useState('');
-  const [showActivation, setShowActivation] = useState(!userSession);
+  const [showActivation, setShowActivation] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarTransparency, setSidebarTransparency] = useState(80);
@@ -39,6 +40,13 @@ export default function HomePage() {
   });
   const [currentBroadcast, setCurrentBroadcast] = useState<BroadcastMessage | null>(null);
   const [userRatingLoading, setUserRatingLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // 客戶端初始化
+  useEffect(() => {
+    setIsClient(true);
+    initializeUserSession();
+  }, [initializeUserSession]);
 
   useEffect(() => {
     loadAbujiChannels();
@@ -48,6 +56,17 @@ export default function HomePage() {
       return () => clearInterval(interval);
     }
   }, [userSession]);
+  
+  // 檢查用戶會話並決定是否顯示啟動碼輸入
+  useEffect(() => {
+    if (!isClient) return; // 只在客戶端執行
+    
+    if (!userSession) {
+      setShowActivation(true);
+    } else {
+      setShowActivation(false);
+    }
+  }, [userSession, isClient]);
 
   const loadAbujiChannels = async () => {
     try {
@@ -56,11 +75,15 @@ export default function HomePage() {
       
       if (savedChannels.length > 0) {
         setChannels(savedChannels);
+        console.log(`成功載入 ${savedChannels.length} 個已儲存的頻道`);
       } else {
         setChannels([]);
+        console.log('暫無已儲存的頻道，請載入播放清單');
       }
     } catch (error) {
       console.error('載入頻道失敗:', error);
+      setChannels([]);
+      // 不在這裡顯示錯誤提示，避免打擾用戶體驗
     } finally {
       setIsLoading(false);
     }
@@ -294,6 +317,17 @@ export default function HomePage() {
     );
   };
 
+  // 等待客戶端初始化
+  if (!isClient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+        <div className="glass p-8 rounded-2xl">
+          <div className="text-white text-center">載入中...</div>
+        </div>
+      </div>
+    );
+  }
+
   // 顯示系統初始化檢查
   if (showSetup) {
     return <InitialSetup />;
@@ -410,19 +444,23 @@ export default function HomePage() {
             <header className="text-center mb-8">
               <h1 className="text-4xl font-bold text-white mb-2">阿布吉播放器</h1>
               <p className="text-white/80">最佳播放清單 • 多平台支援</p>
-              {userSession && (
-                <div className="mt-2 text-sm text-yellow-400">
-                  用戶等級: {userSession.user_level} 
-                  {userSession.user_level === 3 && (
-                    <button
-                      onClick={() => router.push('/management')}
-                      className="ml-4 bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-white text-xs"
-                    >
-                      管理頁面
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="mt-2 text-sm text-yellow-400">
+                {userSession ? (
+                  <>
+                    用戶等級: {userSession.user_level} 
+                    {userSession.user_level === 3 && (
+                      <button
+                        onClick={() => router.push('/management')}
+                        className="ml-4 bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-white text-xs"
+                      >
+                        管理頁面
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <span className="opacity-0">載入中...</span>
+                )}
+              </div>
             </header>
 
             {/* 自定義播放清單輸入 */}
@@ -452,9 +490,10 @@ export default function HomePage() {
                 <h2 className="text-xl font-semibold text-white">阿布吉節目單</h2>
                 <button
                   onClick={loadAbujiChannels}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
                 >
-                  重新載入
+                  {isLoading ? '載入中...' : '重新載入'}
                 </button>
               </div>
               
@@ -466,7 +505,9 @@ export default function HomePage() {
               ) : channels.length > 0 ? (
                 <div>
                   <p className="text-white/60 mb-4">點擊頻道開始觀看</p>
-                  {renderChannelGrid()}
+                  <div className="channel-container">
+                    {renderChannelGrid()}
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-12 text-white/60">
