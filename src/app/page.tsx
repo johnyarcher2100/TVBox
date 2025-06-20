@@ -361,7 +361,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen no-horizontal-scroll">
       {/* 播放器模式 */}
       {currentChannel ? (
         <div className="h-screen flex bg-black relative">
@@ -438,8 +438,8 @@ export default function HomePage() {
         </div>
       ) : (
         /* 首頁模式 */
-        <div className="p-2 sm:p-4">
-          <div className="max-w-7xl mx-auto">
+        <div className="p-2 sm:p-4 no-horizontal-scroll">
+          <div className="max-w-7xl mx-auto w-full">
             {/* 標題區域 */}
             <header className="text-center mobile-subtitle">
               <h1 className="mobile-title font-bold text-white">阿布吉播放器</h1>

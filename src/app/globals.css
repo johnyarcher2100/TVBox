@@ -17,21 +17,21 @@
   }
   
   .channel-grid {
-    @apply grid gap-2 p-2;
-    grid-template-columns: repeat(3, 1fr);
-    @apply overflow-y-auto max-h-[50vh];
+    @apply grid gap-2 p-2 w-full;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    @apply overflow-y-auto overflow-x-hidden max-h-[50vh];
   }
   
   @media (min-width: 480px) {
     .channel-grid {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       @apply gap-3 p-3 max-h-[55vh];
     }
   }
   
   @media (min-width: 640px) {
     .channel-grid {
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       @apply gap-4 p-4 max-h-[60vh];
     }
   }
@@ -44,7 +44,7 @@
   }
   
   .channel-container {
-    @apply overflow-y-auto;
+    @apply overflow-y-auto overflow-x-hidden w-full;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   }
@@ -86,8 +86,8 @@
   }
   
   .channel-card {
-    @apply relative flex flex-col items-center rounded-lg glass hover:bg-white/20 transition-all cursor-pointer;
-    @apply p-2 min-h-[100px];
+    @apply relative flex flex-col items-center rounded-lg glass hover:bg-white/20 transition-all cursor-pointer w-full min-w-0;
+    @apply p-2 min-h-[100px] max-w-full;
   }
   
   @media (min-width: 480px) {
@@ -109,7 +109,7 @@
   }
   
   .channel-icon {
-    @apply w-12 h-12 rounded object-cover mb-1.5;
+    @apply w-12 h-12 rounded object-cover mb-1.5 flex-shrink-0;
   }
   
   @media (min-width: 480px) {
@@ -131,7 +131,7 @@
   }
   
   .channel-name {
-    @apply text-xs font-medium text-center text-white line-clamp-2 leading-tight;
+    @apply text-xs font-medium text-center text-white line-clamp-2 leading-tight w-full overflow-hidden;
   }
   
   @media (min-width: 640px) {
@@ -141,7 +141,7 @@
   }
   
   .channel-rating {
-    @apply text-xs text-yellow-400 mt-0.5;
+    @apply text-xs text-yellow-400 mt-0.5 flex-shrink-0;
   }
   
   @media (min-width: 640px) {
@@ -212,6 +212,10 @@
     .mobile-section {
       @apply p-6 mb-8;
     }
+  }
+  
+  .no-horizontal-scroll {
+    @apply overflow-x-hidden w-full max-w-full;
   }
 }
 
