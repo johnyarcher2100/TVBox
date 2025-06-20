@@ -3,12 +3,10 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  ...(process.env.NODE_ENV === 'development' ? {
-    // 開發模式設定
-    experimental: {
-      esmExternals: 'loose'
-    }
-  } : {
+  experimental: {
+    esmExternals: 'loose'
+  },
+  ...(process.env.NODE_ENV === 'production' ? {
     // 生產模式設定
     output: 'export',
     distDir: 'out',
@@ -24,11 +22,8 @@ const nextConfig = {
           ],
         },
       ]
-    },
-    experimental: {
-      esmExternals: 'loose'
     }
-  })
+  } : {})
 }
 
 module.exports = nextConfig

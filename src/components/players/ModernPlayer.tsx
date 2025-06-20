@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ChromeOptimizedPlayer from './ChromeOptimizedPlayer';
 import StandardPlayer from './StandardPlayer';
+import SimpleTestPlayer from './SimpleTestPlayer';
 import { Channel, PlayerState } from '@/types';
 
 interface ModernPlayerProps {
@@ -15,6 +16,7 @@ export const ModernPlayer: React.FC<ModernPlayerProps> = ({
   onPlayerStateChange = () => {}
 }) => {
   const [browserType, setBrowserType] = useState<string>('');
+  const [testMode, setTestMode] = useState<boolean>(false);
   const [playerState, setPlayerState] = useState<PlayerState>({
     isPlaying: false,
     currentChannel: channel,
@@ -57,6 +59,15 @@ export const ModernPlayer: React.FC<ModernPlayerProps> = ({
 
   // 根據瀏覽器類型選擇播放器
   const renderPlayer = () => {
+    if (testMode) {
+      return (
+        <SimpleTestPlayer
+          channel={channel}
+          onPlayerStateChange={handlePlayerStateChange}
+        />
+      );
+    }
+
     switch (browserType) {
       case 'chrome':
         return (
@@ -85,11 +96,21 @@ export const ModernPlayer: React.FC<ModernPlayerProps> = ({
       {/* 播放器狀態指示器 */}
       <div className="absolute top-4 left-4 glass px-3 py-1 rounded-lg text-white text-sm">
         <span className="opacity-75">
-          {browserType === 'chrome' ? 'Chrome專用' : '標準'} 播放器
+          {testMode ? '測試模式' : (browserType === 'chrome' ? 'Chrome專用' : '標準')} 播放器
         </span>
         {playerState.playbackError && (
           <span className="text-red-400 ml-2">⚠</span>
         )}
+      </div>
+      
+      {/* 測試模式切換按鈕 */}
+      <div className="absolute top-4 right-4 space-x-2">
+        <button
+          onClick={() => setTestMode(!testMode)}
+          className="glass px-3 py-1 rounded-lg text-white text-sm hover:bg-white/20 transition-colors"
+        >
+          {testMode ? '退出測試' : '測試模式'}
+        </button>
       </div>
     </div>
   );
