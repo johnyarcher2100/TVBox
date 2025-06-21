@@ -80,6 +80,7 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
       hls.attachMedia(videoRef.current);
       
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setError(null); // 清除錯誤狀態
         if (videoRef.current) {
           videoRef.current.volume = 1.0; // 設定音量為最大
         }
@@ -104,6 +105,7 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
       video.load();
       
       video.addEventListener('loadeddata', () => {
+        setError(null); // 清除錯誤狀態
         video.volume = 1.0; // 設定音量為最大
         video.play();
         onPlayerStateChange({ isPlaying: true, playbackError: undefined, volume: 100 });
@@ -116,12 +118,13 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
   };
 
   const handleRetry = () => {
+    setError(null); // 清除錯誤狀態
     initializePlayer();
   };
 
   const handleOpenInVLC = () => {
-    // Placeholder for VLC opening logic
-    console.log('Opening in VLC');
+    const vlcUrl = `vlc://${channel.url}`;
+    window.open(vlcUrl, '_blank');
   };
 
   return (
@@ -176,16 +179,18 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
         }}
         onLoadedData={() => {
           setIsLoading(false);
+          setError(null); // 清除錯誤狀態
           if (videoRef.current) {
             videoRef.current.volume = 1.0;
           }
-          onPlayerStateChange({ isPlaying: true });
+          onPlayerStateChange({ isPlaying: true, playbackError: undefined });
         }}
         onPlay={() => {
+          setError(null); // 清除錯誤狀態
           if (videoRef.current) {
             videoRef.current.volume = 1.0;
           }
-          onPlayerStateChange({ isPlaying: true });
+          onPlayerStateChange({ isPlaying: true, playbackError: undefined });
         }}
         onPause={() => onPlayerStateChange({ isPlaying: false })}
         onError={(e) => {

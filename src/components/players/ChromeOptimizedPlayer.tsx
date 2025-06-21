@@ -91,6 +91,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
         const success = await tryOptimalMethod(channel.url, urlAnalysis);
         if (success) {
           setIsLoading(false);
+          setError(null); // 確保清除錯誤狀態
           return;
         }
       }
@@ -107,6 +108,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
             proxyUsed: accessTest.method.includes('proxy')
           });
           setIsLoading(false);
+          setError(null); // 確保清除錯誤狀態
           return;
         }
       }
@@ -122,6 +124,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
             proxyUsed: true
           });
           setIsLoading(false);
+          setError(null); // 確保清除錯誤狀態
           return;
         }
       }
@@ -494,6 +497,7 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
   const handleRetry = () => {
     if (retryCount < maxRetries) {
       setRetryCount(prev => prev + 1);
+      setError(null); // 清除錯誤狀態
       console.log(`重試播放 (第 ${retryCount + 1} 次)`);
       initializeChromePlayer();
     } else {
@@ -580,17 +584,19 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
         onLoadedData={() => {
           console.log('視頻數據載入完成');
           setIsLoading(false);
+          setError(null); // 清除錯誤狀態
           if (videoRef.current) {
             videoRef.current.volume = 1.0;
           }
-          onPlayerStateChange({ isPlaying: true });
+          onPlayerStateChange({ isPlaying: true, playbackError: undefined });
         }}
         onPlay={() => {
           console.log('視頻開始播放');
+          setError(null); // 清除錯誤狀態
           if (videoRef.current) {
             videoRef.current.volume = 1.0;
           }
-          onPlayerStateChange({ isPlaying: true });
+          onPlayerStateChange({ isPlaying: true, playbackError: undefined });
         }}
         onPause={() => {
           console.log('視頻暫停');
