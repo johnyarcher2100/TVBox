@@ -507,62 +507,111 @@ export const ChromeOptimizedPlayer: React.FC<ChromeOptimizedPlayerProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div className="w-full h-full bg-black relative player-container">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+          <div className="text-center text-white">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <div className="text-lg font-medium">載入中...</div>
+            <div className="text-sm text-white/60 mt-2">
+              正在使用 {currentMethod || 'Chrome 優化播放器'}
+            </div>
+            {attempts.length > 0 && (
+              <div className="text-xs text-white/40 mt-2">
+                已嘗試: {attempts.join(', ')}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
+          <div className="text-center text-white max-w-md mx-4">
+            <div className="text-red-400 text-6xl mb-4">⚠️</div>
+            <div className="text-xl font-medium mb-4">播放失敗</div>
+            <div className="text-sm text-white/80 mb-6 leading-relaxed">
+              {error}
+            </div>
+            
+            {retryCount < maxRetries && (
+              <button
+                onClick={handleRetry}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium mb-3 mr-3 transition-colors"
+              >
+                重試 ({retryCount + 1}/{maxRetries})
+              </button>
+            )}
+            
+            <button
+              onClick={handleOpenInVLC}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              在 VLC 中打開
+            </button>
+            
+            {attempts.length > 0 && (
+              <div className="mt-4 text-xs text-white/60">
+                <div className="mb-2">已嘗試的方法:</div>
+                <div className="bg-black/50 rounded p-2">
+                  {attempts.map((attempt, index) => (
+                    <div key={index} className="mb-1">
+                      {index + 1}. {attempt}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
         controls
-        autoPlay
         playsInline
-        onPlay={() => onPlayerStateChange({ isPlaying: true })}
-        onPause={() => onPlayerStateChange({ isPlaying: false })}
-        onVolumeChange={(e) => {
-          const video = e.target as HTMLVideoElement;
-          onPlayerStateChange({ 
-            volume: video.volume * 100,
-            isMuted: video.muted 
-          });
+        autoPlay
+        muted={false}
+        onLoadStart={() => {
+          console.log('視頻開始載入');
+          setIsLoading(true);
+        }}
+        onLoadedData={() => {
+          console.log('視頻數據載入完成');
+          setIsLoading(false);
+          if (videoRef.current) {
+            videoRef.current.volume = 1.0;
+          }
+          onPlayerStateChange({ isPlaying: true });
+        }}
+        onPlay={() => {
+          console.log('視頻開始播放');
+          if (videoRef.current) {
+            videoRef.current.volume = 1.0;
+          }
+          onPlayerStateChange({ isPlaying: true });
+        }}
+        onPause={() => {
+          console.log('視頻暫停');
+          onPlayerStateChange({ isPlaying: false });
         }}
         onError={(e) => {
-          console.error('視頻元素錯誤:', e);
+          console.error('視頻播放錯誤:', e);
           setError('視頻播放錯誤');
+          setIsLoading(false);
+          onPlayerStateChange({ playbackError: '視頻播放錯誤' });
         }}
       />
-      
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-white">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-lg">載入中...</p>
-          </div>
-        </div>
-      )}
-      
-      {error && (
-        <div className="absolute top-4 right-4 bg-black/80 text-white p-3 rounded-lg max-w-xs z-10">
-          <div className="flex items-center space-x-2 mb-2">
-            <div className="text-red-400 text-sm">⚠</div>
-            <span className="text-xs">播放錯誤</span>
-          </div>
-          <div className="space-y-1">
-            <button
-              onClick={handleRetry}
-              disabled={retryCount >= maxRetries}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-2 py-1 rounded text-xs transition-colors"
-            >
-              重試
-            </button>
-            <button
-              onClick={handleOpenInVLC}
-              className="w-full bg-orange-600 hover:bg-orange-700 px-2 py-1 rounded text-xs transition-colors"
-            >
-              VLC 開啟
-            </button>
-          </div>
-        </div>
-      )}
-      
 
+      {/* 播放信息顯示 */}
+      {playbackInfo && !isLoading && !error && (
+        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+          {playbackInfo.method}
+          {playbackInfo.responseTime && ` (${playbackInfo.responseTime}ms)`}
+          {playbackInfo.proxyUsed && ' 🔄'}
+        </div>
+      )}
     </div>
   );
 };

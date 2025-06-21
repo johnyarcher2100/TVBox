@@ -524,13 +524,16 @@ export default function HomePage() {
     <div className="min-h-screen no-horizontal-scroll overflow-y-auto">
       {/* 播放器模式 */}
       {currentChannel ? (
-        <div className="h-screen flex bg-black relative">
-          {/* 主播放區域 */}
-          <div className="flex-1 relative">
-            <ModernPlayer
-              channel={currentChannel}
-              onPlayerStateChange={(state) => setPlayerState(prev => ({ ...prev, ...state }))}
-            />
+        <div className="relative bg-black">
+          {/* 主播放區域 - 針對手機直立模式優化 */}
+          <div className="relative">
+            {/* 播放器容器 - 根據屏幕方向調整高度 */}
+            <div className="w-full aspect-video max-h-[50vh] sm:max-h-[70vh] md:h-screen relative">
+              <ModernPlayer
+                channel={currentChannel}
+                onPlayerStateChange={(state) => setPlayerState(prev => ({ ...prev, ...state }))}
+              />
+            </div>
             
             {/* 推播訊息跑馬燈 */}
             {currentBroadcast && currentBroadcast.message_type === 'text' && (
@@ -549,124 +552,167 @@ export default function HomePage() {
                 </div>
               </div>
             )}
-            
-            {/* 控制按鈕與評分區域 - 重新設計為底部控制欄 */}
-            <div className="absolute bottom-0 left-0 right-0 gradient-bg player-controls">
-              {/* 控制面板 */}
-              <div className="px-4 py-3 sm:px-6 sm:py-4">
-                <div className="flex items-center justify-between">
-                  {/* 左側：頻道信息 */}
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    {currentChannel.logo && (
-                      <img 
-                        src={currentChannel.logo} 
-                        alt={currentChannel.name}
-                        className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-lg glass-enhanced p-1"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white font-medium text-sm sm:text-base truncate">
-                        {currentChannel.name}
-                      </div>
-                      <div className="text-white/60 text-xs sm:text-sm">
-                        {currentChannel.category || '正在直播'} • ⭐ {currentChannel.rating}
-                      </div>
-                    </div>
+          </div>
+          
+          {/* 控制面板 - 移到播放器下方，在手機上更緊湊 */}
+          <div className="bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+            <div className="px-3 py-2 sm:px-6 sm:py-4">
+              {/* 頻道信息區 - 手機版更緊湊 */}
+              <div className="flex items-center space-x-3 mb-3">
+                {currentChannel.logo && (
+                  <img 
+                    src={currentChannel.logo} 
+                    alt={currentChannel.name}
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-lg glass-enhanced p-1"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-medium text-base sm:text-lg truncate">
+                    {currentChannel.name}
                   </div>
-
-                  {/* 中間：主要控制按鈕 */}
-                  <div className="flex items-center space-x-2 sm:space-x-3">
-                    <button
-                      onClick={() => setCurrentChannel(null)}
-                      className="control-button flex items-center space-x-1 sm:space-x-2 glass-enhanced text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                      </svg>
-                      <span className="hidden sm:inline">返回首頁</span>
-                    </button>
-
-                    <button
-                      onClick={() => setShowSidebar(true)}
-                      className="control-button flex items-center space-x-1 sm:space-x-2 bg-blue-600/80 hover:bg-blue-600 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium border border-blue-500/50"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                      </svg>
-                      <span className="hidden sm:inline">選擇頻道</span>
-                    </button>
-
-                    {userSession && userSession.user_level === 3 && (
-                      <button
-                        onClick={() => router.push('/management')}
-                        className="control-button flex items-center space-x-1 sm:space-x-2 bg-purple-600/80 hover:bg-purple-600 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium border border-purple-500/50"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="hidden sm:inline">管理</span>
-                      </button>
-                    )}
+                  <div className="text-white/60 text-sm">
+                    {currentChannel.category || '正在直播'} • ⭐ {currentChannel.rating}
                   </div>
-
-                  {/* 右側：評分與額外功能 */}
-                  <div className="flex items-center space-x-2 sm:space-x-3">
-                    {/* 評分按鈕 */}
-                    <div className="flex items-center space-x-1 glass-enhanced rounded-lg p-1">
-                      <button
-                        onClick={() => handleRating('like')}
-                        disabled={userRatingLoading}
-                        className="rating-button w-8 h-8 sm:w-9 sm:h-9 bg-green-600/80 hover:bg-green-600 disabled:bg-gray-600 text-white rounded-md flex items-center justify-center text-sm disabled:cursor-not-allowed"
-                        title="喜歡這個頻道"
-                      >
-                        👍
-                      </button>
-                      <button
-                        onClick={() => handleRating('dislike')}
-                        disabled={userRatingLoading}
-                        className="rating-button w-8 h-8 sm:w-9 sm:h-9 bg-red-600/80 hover:bg-red-600 disabled:bg-gray-600 text-white rounded-md flex items-center justify-center text-sm disabled:cursor-not-allowed"
-                        title="不喜歡這個頻道"
-                      >
-                        👎
-                      </button>
-                    </div>
-
-                    {/* 全螢幕切換按鈕 */}
-                    <button
-                      onClick={() => {
-                        if (document.fullscreenElement) {
-                          document.exitFullscreen();
-                        } else {
-                          document.documentElement.requestFullscreen();
-                        }
-                      }}
-                      className="control-button w-8 h-8 sm:w-9 sm:h-9 glass-enhanced text-white rounded-lg flex items-center justify-center"
-                      title="全螢幕切換"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 額外信息欄 */}
-                <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-xs text-white/60">
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 text-xs text-white/50 mt-1">
                     <span className="flex items-center space-x-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                       <span>直播中</span>
                     </span>
-                    {userSession && (
-                      <span>用戶等級: {userSession.user_level}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-4">
                     <span>總頻道: {channels.length}</span>
-                    <span>阿布吉播放器 v1.0</span>
                   </div>
                 </div>
+              </div>
+
+              {/* 控制按鈕區 - 重新排列為更緊湊的布局 */}
+              <div className="flex items-center justify-between">
+                {/* 主要控制按鈕 */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentChannel(null)}
+                    className="control-button flex items-center space-x-1 glass-enhanced text-white px-3 py-2 rounded-lg text-sm font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span className="hidden sm:inline">返回</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowSidebar(true)}
+                    className="control-button flex items-center space-x-1 bg-blue-600/80 hover:bg-blue-600 backdrop-blur-sm text-white px-3 py-2 rounded-lg text-sm font-medium border border-blue-500/50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                    <span className="hidden sm:inline">頻道</span>
+                  </button>
+
+                  {userSession && userSession.user_level === 3 && (
+                    <button
+                      onClick={() => router.push('/management')}
+                      className="control-button flex items-center space-x-1 bg-purple-600/80 hover:bg-purple-600 backdrop-blur-sm text-white px-3 py-2 rounded-lg text-sm font-medium border border-purple-500/50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="hidden sm:inline">管理</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* 評分與功能按鈕 */}
+                <div className="flex items-center space-x-2">
+                  {/* 評分按鈕 */}
+                  <div className="flex items-center space-x-1 glass-enhanced rounded-lg p-1">
+                    <button
+                      onClick={() => handleRating('like')}
+                      disabled={userRatingLoading}
+                      className="rating-button w-8 h-8 bg-green-600/80 hover:bg-green-600 disabled:bg-gray-600 text-white rounded-md flex items-center justify-center text-sm disabled:cursor-not-allowed"
+                      title="喜歡這個頻道"
+                    >
+                      👍
+                    </button>
+                    <button
+                      onClick={() => handleRating('dislike')}
+                      disabled={userRatingLoading}
+                      className="rating-button w-8 h-8 bg-red-600/80 hover:bg-red-600 disabled:bg-gray-600 text-white rounded-md flex items-center justify-center text-sm disabled:cursor-not-allowed"
+                      title="不喜歡這個頻道"
+                    >
+                      👎
+                    </button>
+                  </div>
+
+                  {/* 全螢幕切換按鈕 */}
+                  <button
+                    onClick={() => {
+                      if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                      } else {
+                        document.documentElement.requestFullscreen();
+                      }
+                    }}
+                    className="control-button w-8 h-8 glass-enhanced text-white rounded-lg flex items-center justify-center"
+                    title="全螢幕切換"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 手機版額外內容區域 - 只在非全屏時顯示 */}
+          <div className="md:hidden bg-gray-900 min-h-[30vh]">
+            <div className="p-4">
+              <h3 className="text-white font-medium mb-3">相關功能</h3>
+              
+              {/* 用戶信息 */}
+              {userSession && (
+                <div className="glass-enhanced rounded-lg p-3 mb-3">
+                  <div className="text-white text-sm">
+                    <div className="flex justify-between items-center">
+                      <span>用戶等級: {userSession.user_level}</span>
+                      <button
+                        onClick={handleLogout}
+                        className="bg-gray-500/80 hover:bg-gray-600 px-2 py-1 rounded text-xs transition-colors"
+                      >
+                        登出
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 快速功能 */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={loadAbujiChannels}
+                  disabled={isLoading}
+                  className="glass-enhanced p-3 rounded-lg text-white text-sm hover:bg-white/10 transition-colors"
+                >
+                  <div className="text-center">
+                    <div className="text-lg mb-1">🔄</div>
+                    <div>重新載入頻道</div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setCurrentChannel(null)}
+                  className="glass-enhanced p-3 rounded-lg text-white text-sm hover:bg-white/10 transition-colors"
+                >
+                  <div className="text-center">
+                    <div className="text-lg mb-1">📺</div>
+                    <div>瀏覽頻道</div>
+                  </div>
+                </button>
+              </div>
+
+              {/* 播放器信息 */}
+              <div className="mt-4 text-center text-xs text-white/50">
+                阿布吉播放器 v1.0
               </div>
             </div>
           </div>

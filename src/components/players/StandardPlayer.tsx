@@ -115,49 +115,86 @@ export const StandardPlayer: React.FC<StandardPlayerProps> = ({
     }
   };
 
+  const handleRetry = () => {
+    initializePlayer();
+  };
+
+  const handleOpenInVLC = () => {
+    // Placeholder for VLC opening logic
+    console.log('Opening in VLC');
+  };
+
   return (
-    <div className="relative w-full h-full bg-black">
+    <div className="w-full h-full bg-black relative player-container">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+          <div className="text-center text-white">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <div className="text-lg font-medium">載入中...</div>
+            <div className="text-sm text-white/60 mt-2">
+              正在使用標準播放器
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
+          <div className="text-center text-white max-w-md mx-4">
+            <div className="text-red-400 text-6xl mb-4">⚠️</div>
+            <div className="text-xl font-medium mb-4">播放失敗</div>
+            <div className="text-sm text-white/80 mb-6 leading-relaxed">
+              {error}
+            </div>
+            
+            <button
+              onClick={handleRetry}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium mb-3 mr-3 transition-colors"
+            >
+              重試
+            </button>
+            
+            <button
+              onClick={handleOpenInVLC}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              在 VLC 中打開
+            </button>
+          </div>
+        </div>
+      )}
+
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
         controls
-        autoPlay
-        muted
         playsInline
-        onPlay={() => onPlayerStateChange({ isPlaying: true })}
+        autoPlay
+        muted={false}
+        onLoadStart={() => {
+          setIsLoading(true);
+        }}
+        onLoadedData={() => {
+          setIsLoading(false);
+          if (videoRef.current) {
+            videoRef.current.volume = 1.0;
+          }
+          onPlayerStateChange({ isPlaying: true });
+        }}
+        onPlay={() => {
+          if (videoRef.current) {
+            videoRef.current.volume = 1.0;
+          }
+          onPlayerStateChange({ isPlaying: true });
+        }}
         onPause={() => onPlayerStateChange({ isPlaying: false })}
-        onVolumeChange={(e) => {
-          const video = e.target as HTMLVideoElement;
-          onPlayerStateChange({ 
-            volume: video.volume * 100,
-            isMuted: video.muted 
-          });
+        onError={(e) => {
+          console.error('標準播放器錯誤:', e);
+          setError('視頻播放錯誤');
+          setIsLoading(false);
+          onPlayerStateChange({ playbackError: '視頻播放錯誤' });
         }}
       />
-      
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-white">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>載入播放器中...</p>
-          </div>
-        </div>
-      )}
-      
-      {error && (
-        <div className="absolute top-4 right-4 bg-black/80 text-white p-3 rounded-lg max-w-xs z-10">
-          <div className="flex items-center space-x-2 mb-2">
-            <div className="text-red-400 text-sm">⚠</div>
-            <span className="text-xs">播放錯誤</span>
-          </div>
-          <button
-            onClick={initializePlayer}
-            className="w-full bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs transition-colors"
-          >
-            重試
-          </button>
-        </div>
-      )}
     </div>
   );
 };
