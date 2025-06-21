@@ -97,54 +97,54 @@ export default function PlayerPage() {
   const renderChannelList = () => {
     return (
       <div className="h-full overflow-y-auto">
-        <div className="p-4 border-b border-white/20">
-          <h3 className="text-white font-semibold mb-2">頻道列表</h3>
+        <div className="px-2 py-1.5 border-b border-white/20">
+          <h3 className="text-white font-medium mb-2 text-sm">頻道列表</h3>
           <input
             type="range"
             min="20"
             max="100"
             value={sidebarTransparency}
             onChange={(e) => setSidebarTransparency(Number(e.target.value))}
-            className="w-full mb-2"
+            className="w-full mb-1"
           />
           <span className="text-xs text-white/60">透明度: {sidebarTransparency}%</span>
         </div>
         
-        <div className="p-2 space-y-2">
+        <div className="p-1 space-y-1">
           {channels.map((channel) => (
             <div
               key={channel.id}
               onClick={() => handleChannelSelect(channel)}
-              className={`p-3 rounded-lg cursor-pointer transition-colors ${
+              className={`px-2 py-1.5 rounded cursor-pointer transition-colors ${
                 currentChannel?.id === channel.id
                   ? 'bg-blue-600/80'
                   : 'bg-white/10 hover:bg-white/20'
               }`}
             >
-              <div className="flex items-center space-x-3">
-                {channel.logo ? (
-                  <img 
-                    src={channel.logo} 
-                    alt={channel.name}
-                    className="w-8 h-8 rounded object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center text-white text-xs">
-                    {channel.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-white text-sm font-medium truncate">
-                    {channel.name}
-                  </div>
-                  <div className="text-yellow-400 text-xs">
-                    ⭐ {channel.rating}
+                              <div className="flex items-center space-x-1.5">
+                  {channel.logo ? (
+                    <img 
+                      src={channel.logo} 
+                      alt={channel.name}
+                      className="w-5 h-5 object-contain flex-shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-5 h-5 bg-gray-600 rounded flex items-center justify-center text-white text-xs flex-shrink-0">
+                      {channel.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white text-xs font-medium truncate leading-tight">
+                      {channel.name}
+                    </div>
+                    <div className="text-yellow-400 text-xs leading-none">
+                      ⭐ {channel.rating}
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
           ))}
         </div>
@@ -183,29 +183,8 @@ export default function PlayerPage() {
           </div>
         )}
         
-        {/* 評分按鈕區域 */}
-        <div 
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 space-y-4"
-          style={{ backgroundColor: `rgba(0, 0, 0, ${(100 - sidebarTransparency) / 100})` }}
-        >
-          <button
-            onClick={() => handleRating('like')}
-            disabled={userRatingLoading}
-            className="w-12 h-12 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors"
-          >
-            👍
-          </button>
-          <button
-            onClick={() => handleRating('dislike')}
-            disabled={userRatingLoading}
-            className="w-12 h-12 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors"
-          >
-            👎
-          </button>
-        </div>
-        
-        {/* 控制按鈕 */}
-        <div className="absolute bottom-4 left-4 flex space-x-2">
+        {/* 控制按鈕和評分區域 - 移到下方工具欄 */}
+        <div className="absolute bottom-4 left-4 flex items-center space-x-2">
           <button
             onClick={() => router.push('/')}
             className="bg-black/80 text-white px-4 py-2 rounded-lg hover:bg-black transition-colors"
@@ -218,13 +197,33 @@ export default function PlayerPage() {
           >
             {showChannelList ? '隱藏' : '顯示'}頻道
           </button>
+          
+          {/* 評分按鈕 - 整合到工具欄 */}
+          <div className="flex space-x-2 ml-4">
+            <button
+              onClick={() => handleRating('like')}
+              disabled={userRatingLoading}
+              className="w-10 h-10 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-sm"
+              title="喜歡這個頻道"
+            >
+              👍
+            </button>
+            <button
+              onClick={() => handleRating('dislike')}
+              disabled={userRatingLoading}
+              className="w-10 h-10 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-sm"
+              title="不喜歡這個頻道"
+            >
+              👎
+            </button>
+          </div>
         </div>
       </div>
       
-      {/* 側邊欄（頻道列表） */}
+      {/* 側邊欄（頻道列表） - 縮小寬度 */}
       <div className={`
         ${showChannelList ? 'block' : 'hidden'} lg:block
-        lg:w-80 w-full lg:h-full h-1/3
+        lg:w-40 w-full lg:h-full h-1/3
         ${sidebarTransparency < 50 ? 'bg-black/90' : 'bg-black/60'}
         backdrop-blur-sm border-l border-white/20
       `}>

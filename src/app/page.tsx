@@ -8,6 +8,7 @@ import { PlaylistParser } from '@/utils/playlistParser';
 import { InitialSetup } from '@/components/InitialSetup';
 import { ModernPlayer } from '@/components/players/ModernPlayer';
 import { RatingSystem } from '@/utils/ratingSystem';
+import { testDatabaseConnection } from '@/lib/supabase';
 import { Channel, PlayerState, BroadcastMessage } from '@/types';
 
 export default function HomePage() {
@@ -20,7 +21,9 @@ export default function HomePage() {
     userSession,
     initializeUserSession,
     broadcastMessages,
-    setBroadcastMessages
+    setBroadcastMessages,
+    logout,
+    deleteChannelsWithLowRating
   } = useStore();
   
   const [playlistUrl, setPlaylistUrl] = useState('');
@@ -42,21 +45,36 @@ export default function HomePage() {
   const [userRatingLoading, setUserRatingLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [showRatingButtons, setShowRatingButtons] = useState(false);
+  const [dbConnectionStatus, setDbConnectionStatus] = useState<'testing' | 'connected' | 'failed' | null>(null);
+  const [channelSearch, setChannelSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   // 客戶端初始化
   useEffect(() => {
     setIsClient(true);
     initializeUserSession();
+    
+    // 測試資料庫連接
+    testDatabaseConnection().then(isConnected => {
+      setDbConnectionStatus(isConnected ? 'connected' : 'failed');
+    });
   }, [initializeUserSession]);
 
   useEffect(() => {
-    loadAbujiChannels();
-    if (userSession) {
+    if (dbConnectionStatus === 'connected') {
+      loadAbujiChannels();
+    } else if (dbConnectionStatus === 'failed') {
+      console.log('資料庫連接失敗，使用本地模式');
+      setChannels([]);
+      setIsLoading(false);
+    }
+    
+    if (userSession && dbConnectionStatus === 'connected') {
       loadBroadcastMessages();
       const interval = setInterval(loadBroadcastMessages, 30000);
       return () => clearInterval(interval);
     }
-  }, [userSession]);
+  }, [userSession, dbConnectionStatus]);
   
   // 檢查用戶會話並決定是否顯示啟動碼輸入
   useEffect(() => {
@@ -72,21 +90,34 @@ export default function HomePage() {
   const loadAbujiChannels = async () => {
     try {
       setIsLoading(true);
+      console.log('開始載入頻道...');
+      
+      // 先嘗試從資料庫載入
       const savedChannels = await DatabaseOperations.getChannels();
       
       if (savedChannels.length > 0) {
         setChannels(savedChannels);
         console.log(`成功載入 ${savedChannels.length} 個已儲存的頻道`);
       } else {
+        // 如果沒有儲存的頻道，設置為空陣列但不顯示錯誤
         setChannels([]);
         console.log('暫無已儲存的頻道，請載入播放清單');
       }
     } catch (error) {
       console.error('載入頻道失敗:', error);
       setChannels([]);
-      // 不在這裡顯示錯誤提示，避免打擾用戶體驗
+      
+      // 添加錯誤提示給用戶
+      if (error instanceof Error) {
+        console.log('錯誤詳情:', error.message);
+        // 如果是網路連接問題，提供友好的提示
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          alert('網路連接失敗，請檢查網路連接後重試');
+        }
+      }
     } finally {
       setIsLoading(false);
+      console.log('載入頻道完成');
     }
   };
 
@@ -153,6 +184,8 @@ export default function HomePage() {
     
     try {
       setIsLoading(true);
+      console.log('開始載入播放清單:', playlistUrl);
+      
       const parsedChannels = await PlaylistParser.parsePlaylist(playlistUrl);
       
       if (parsedChannels.length > 0) {
@@ -160,21 +193,27 @@ export default function HomePage() {
         setChannels(parsedChannels);
         
         // 存儲到資料庫以供下次使用
-        try {
-          await DatabaseOperations.saveChannels(parsedChannels);
-          console.log(`成功存儲 ${parsedChannels.length} 個頻道到資料庫`);
-        } catch (dbError) {
-          console.error('存儲頻道到資料庫失敗:', dbError);
-          // 不影響主要功能，只記錄錯誤
+        if (dbConnectionStatus === 'connected') {
+          try {
+            await DatabaseOperations.saveChannels(parsedChannels);
+            console.log(`成功存儲 ${parsedChannels.length} 個頻道到資料庫`);
+          } catch (dbError) {
+            console.error('存儲頻道到資料庫失敗:', dbError);
+            // 不影響主要功能，只記錄錯誤
+          }
         }
         
-        alert(`成功載入 ${parsedChannels.length} 個頻道！頻道已保存，下次可直接使用。`);
+        alert(`✅ 成功載入 ${parsedChannels.length} 個頻道！\n${dbConnectionStatus === 'connected' ? '頻道已保存到資料庫，下次可直接使用。' : '本地模式：頻道僅在當前會話中可用。'}`);
+        
+        // 清空輸入框
+        setPlaylistUrl('');
       } else {
-        alert('播放清單解析失敗或無有效頻道');
+        alert('❌ 播放清單解析失敗或無有效頻道');
       }
     } catch (error) {
       console.error('播放清單載入失敗:', error);
-      alert('播放清單載入失敗：' + (error as Error).message);
+      const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+      alert(`❌ 播放清單載入失敗：\n${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -216,10 +255,63 @@ export default function HomePage() {
     }
   };
 
+  // 登出處理
+  const handleLogout = () => {
+    if (confirm('確定要登出嗎？')) {
+      logout();
+    }
+  };
+
+  // 刪除低評分頻道處理
+  const handleDeleteLowRatingChannels = async () => {
+    if (!userSession || userSession.user_level < 2) {
+      alert('此功能僅限等級2以上用戶使用');
+      return;
+    }
+
+    const lowRatingChannels = channels.filter(channel => channel.rating < 51);
+    
+    if (lowRatingChannels.length === 0) {
+      alert('沒有找到評分低於51分的頻道');
+      return;
+    }
+
+    if (confirm(`即將刪除 ${lowRatingChannels.length} 個評分低於51分的頻道，確定繼續嗎？`)) {
+      try {
+        setIsLoading(true);
+        
+        // 從資料庫刪除
+        if (dbConnectionStatus === 'connected') {
+          await DatabaseOperations.deleteChannelsWithLowRating(51);
+        }
+        
+        // 本地狀態更新
+        deleteChannelsWithLowRating();
+        
+        alert(`✅ 成功刪除 ${lowRatingChannels.length} 個低評分頻道`);
+      } catch (error) {
+        console.error('刪除低評分頻道失敗:', error);
+        alert('❌ 刪除失敗：' + (error instanceof Error ? error.message : '未知錯誤'));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // 過濾頻道
+  const filteredChannels = channels.filter(channel => {
+    const matchesSearch = channel.name.toLowerCase().includes(channelSearch.toLowerCase());
+    const matchesCategory = selectedCategory === '' || channel.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // 獲取所有分類
+  const uniqueCategories = Array.from(new Set(channels.map(ch => ch.category).filter(Boolean)));
+
   const renderChannelGrid = () => {
     return (
       <div className="channel-grid">
-        {channels.map((channel) => (
+        {filteredChannels.map((channel) => (
           <div
             key={channel.id}
             className="channel-card"
@@ -252,64 +344,84 @@ export default function HomePage() {
   const renderSidebar = () => {
     return (
       <div className={`
-        fixed left-0 top-0 h-full w-72 sm:w-80 z-50 transform transition-transform duration-300 ease-in-out
+        fixed left-0 top-0 h-full w-40 sm:w-48 z-50 transform transition-transform duration-300 ease-in-out
         ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
         backdrop-blur-sm border-r border-white/20
       `} 
       style={{ backgroundColor: `rgba(0, 0, 0, ${sidebarTransparency / 100})` }}>
         <div className="h-full overflow-y-auto">
-          <div className="p-3 sm:p-4 border-b border-white/20">
+          <div className="px-2 py-1.5 border-b border-white/20">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-white font-semibold text-sm sm:text-base">頻道列表</h3>
+              <h3 className="text-white font-medium text-sm">頻道列表</h3>
               <button
                 onClick={() => setShowSidebar(false)}
-                className="text-white/60 hover:text-white text-lg sm:text-xl"
+                className="text-white/60 hover:text-white text-lg"
               >
                 ✕
               </button>
             </div>
+            
+            {/* 側邊欄搜索 */}
+            <input
+              type="text"
+              placeholder="搜索頻道..."
+              value={channelSearch}
+              onChange={(e) => setChannelSearch(e.target.value)}
+              className="w-full mb-2 px-2 py-1 text-xs bg-white/10 text-white placeholder-white/60 border border-white/20 rounded"
+            />
+            
             <input
               type="range"
               min="20"
               max="100"
               value={sidebarTransparency}
               onChange={(e) => setSidebarTransparency(Number(e.target.value))}
-              className="w-full mb-2"
+              className="w-full mb-1"
             />
             <span className="text-xs text-white/60">透明度: {sidebarTransparency}%</span>
+            
+            {/* 頻道統計 */}
+            <div className="text-xs text-white/60 mt-1">
+              {filteredChannels.length}/{channels.length} 頻道
+            </div>
           </div>
           
-          <div className="p-1.5 sm:p-2 space-y-1.5 sm:space-y-2">
-            {channels.map((channel) => (
+          <div className="p-1 space-y-1">
+            {filteredChannels.map((channel) => (
               <div
                 key={channel.id}
                 onClick={() => handleChannelSelect(channel)}
-                className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors ${
+                className={`px-2 py-1.5 rounded cursor-pointer transition-colors ${
                   currentChannel?.id === channel.id
                     ? 'bg-blue-600/80'
                     : 'bg-white/10 hover:bg-white/20'
                 }`}
               >
-                <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="flex items-center space-x-1.5">
                   {channel.logo ? (
                     <img 
                       src={channel.logo} 
                       alt={channel.name}
-                      className="w-6 h-6 sm:w-8 sm:h-8 rounded object-cover"
+                      className="w-4 h-4 object-contain flex-shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   ) : (
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-600 rounded flex items-center justify-center text-white text-xs">
+                    <div className="w-4 h-4 bg-gray-600 rounded flex items-center justify-center text-white text-xs flex-shrink-0">
                       {channel.name.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-white text-xs sm:text-sm font-medium truncate">
+                    <div className="text-white text-xs font-medium truncate leading-tight">
                       {channel.name}
                     </div>
-                    <div className="text-yellow-400 text-xs">
+                    {channel.category && (
+                      <div className="text-white/60 text-xs truncate leading-none">
+                        {channel.category}
+                      </div>
+                    )}
+                    <div className="text-yellow-400 text-xs leading-none">
                       ⭐ {channel.rating}
                     </div>
                   </div>
@@ -395,60 +507,124 @@ export default function HomePage() {
               </div>
             )}
             
-            {/* 評分按鈕區域 */}
-            <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2">
-              {/* 評分切換按鈕 */}
-              <button
-                onClick={() => setShowRatingButtons(!showRatingButtons)}
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center transition-all duration-300 mb-2"
-                title={showRatingButtons ? '隱藏評分' : '顯示評分'}
-              >
-                {showRatingButtons ? '✕' : '⭐'}
-              </button>
-              
-              {/* 評分按鈕（可收起） */}
-              <div className={`space-y-2 sm:space-y-3 transition-all duration-300 ${
-                showRatingButtons ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform translate-x-full pointer-events-none'
-              }`}>
-                <button
-                  onClick={() => handleRating('like')}
-                  disabled={userRatingLoading}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
-                >
-                  👍
-                </button>
-                <button
-                  onClick={() => handleRating('dislike')}
-                  disabled={userRatingLoading}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-full flex items-center justify-center transition-colors text-xs sm:text-base"
-                >
-                  👎
-                </button>
+            {/* 控制按鈕與評分區域 - 重新設計為底部控制欄 */}
+            <div className="absolute bottom-0 left-0 right-0 gradient-bg player-controls">
+              {/* 控制面板 */}
+              <div className="px-4 py-3 sm:px-6 sm:py-4">
+                <div className="flex items-center justify-between">
+                  {/* 左側：頻道信息 */}
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    {currentChannel.logo && (
+                      <img 
+                        src={currentChannel.logo} 
+                        alt={currentChannel.name}
+                        className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-lg glass-enhanced p-1"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-medium text-sm sm:text-base truncate">
+                        {currentChannel.name}
+                      </div>
+                      <div className="text-white/60 text-xs sm:text-sm">
+                        {currentChannel.category || '正在直播'} • ⭐ {currentChannel.rating}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 中間：主要控制按鈕 */}
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <button
+                      onClick={() => setCurrentChannel(null)}
+                      className="control-button flex items-center space-x-1 sm:space-x-2 glass-enhanced text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                      <span className="hidden sm:inline">返回首頁</span>
+                    </button>
+
+                    <button
+                      onClick={() => setShowSidebar(true)}
+                      className="control-button flex items-center space-x-1 sm:space-x-2 bg-blue-600/80 hover:bg-blue-600 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium border border-blue-500/50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                      <span className="hidden sm:inline">選擇頻道</span>
+                    </button>
+
+                    {userSession && userSession.user_level === 3 && (
+                      <button
+                        onClick={() => router.push('/management')}
+                        className="control-button flex items-center space-x-1 sm:space-x-2 bg-purple-600/80 hover:bg-purple-600 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium border border-purple-500/50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="hidden sm:inline">管理</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 右側：評分與額外功能 */}
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    {/* 評分按鈕 */}
+                    <div className="flex items-center space-x-1 glass-enhanced rounded-lg p-1">
+                      <button
+                        onClick={() => handleRating('like')}
+                        disabled={userRatingLoading}
+                        className="rating-button w-8 h-8 sm:w-9 sm:h-9 bg-green-600/80 hover:bg-green-600 disabled:bg-gray-600 text-white rounded-md flex items-center justify-center text-sm disabled:cursor-not-allowed"
+                        title="喜歡這個頻道"
+                      >
+                        👍
+                      </button>
+                      <button
+                        onClick={() => handleRating('dislike')}
+                        disabled={userRatingLoading}
+                        className="rating-button w-8 h-8 sm:w-9 sm:h-9 bg-red-600/80 hover:bg-red-600 disabled:bg-gray-600 text-white rounded-md flex items-center justify-center text-sm disabled:cursor-not-allowed"
+                        title="不喜歡這個頻道"
+                      >
+                        👎
+                      </button>
+                    </div>
+
+                    {/* 全螢幕切換按鈕 */}
+                    <button
+                      onClick={() => {
+                        if (document.fullscreenElement) {
+                          document.exitFullscreen();
+                        } else {
+                          document.documentElement.requestFullscreen();
+                        }
+                      }}
+                      className="control-button w-8 h-8 sm:w-9 sm:h-9 glass-enhanced text-white rounded-lg flex items-center justify-center"
+                      title="全螢幕切換"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 額外信息欄 */}
+                <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-xs text-white/60">
+                  <div className="flex items-center space-x-4">
+                    <span className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <span>直播中</span>
+                    </span>
+                    {userSession && (
+                      <span>用戶等級: {userSession.user_level}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <span>總頻道: {channels.length}</span>
+                    <span>阿布吉播放器 v1.0</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            {/* 控制按鈕 */}
-            <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
-              <button
-                onClick={() => setCurrentChannel(null)}
-                className="bg-black/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-black transition-colors text-xs sm:text-sm"
-              >
-                返回首頁
-              </button>
-              <button
-                onClick={() => setShowSidebar(true)}
-                className="bg-black/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-black transition-colors text-xs sm:text-sm"
-              >
-                選擇頻道
-              </button>
-              {userSession && userSession.user_level === 3 && (
-                <button
-                  onClick={() => router.push('/management')}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm"
-                >
-                  管理面板
-                </button>
-              )}
             </div>
           </div>
           
@@ -460,48 +636,45 @@ export default function HomePage() {
         <div className="p-2 sm:p-4 no-horizontal-scroll">
           <div className="max-w-7xl mx-auto w-full">
             {/* 標題區域 */}
-            <header className="text-center mobile-subtitle">
-              <h1 className="mobile-title font-bold text-white">阿布吉播放器</h1>
-              <p className="text-white/80 text-xs sm:text-base mb-2">最佳播放清單 • 多平台支援</p>
-              <div className="text-xs sm:text-sm text-yellow-400">
-                {userSession ? (
-                  <>
-                    用戶等級: {userSession.user_level} 
-                    {userSession.user_level === 3 && (
-                      <button
-                        onClick={() => router.push('/management')}
-                        className="ml-2 sm:ml-4 bg-purple-600 hover:bg-purple-700 px-2 py-1 rounded text-white text-xs"
-                      >
-                        管理頁面
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <span className="opacity-0">載入中...</span>
-                )}
-              </div>
+            <header className="text-center mb-4 sm:mb-6">
+              <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">阿布吉播放器</h1>
+              
+              {/* 用戶信息與功能按鈕 - 簡化為單行 */}
+              {userSession && (
+                <div className="flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
+                  <span className="text-yellow-400">等級: {userSession.user_level}</span>
+                  
+                  {userSession.user_level >= 2 && (
+                    <button
+                      onClick={handleDeleteLowRatingChannels}
+                      disabled={isLoading}
+                      className="bg-red-500/80 hover:bg-red-600 disabled:bg-gray-600 px-2 py-1 rounded text-white transition-colors"
+                      title="刪除低評分頻道"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                  
+                  {userSession.user_level === 3 && (
+                    <button
+                      onClick={() => router.push('/management')}
+                      className="bg-purple-500/80 hover:bg-purple-600 px-2 py-1 rounded text-white"
+                      title="管理頁面"
+                    >
+                      ⚙️
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={handleLogout}
+                    className="bg-gray-500/80 hover:bg-gray-600 px-2 py-1 rounded text-white transition-colors"
+                    title="登出"
+                  >
+                    🚪
+                  </button>
+                </div>
+              )}
             </header>
-
-            {/* 自定義播放清單輸入 */}
-            <div className="glass mobile-section rounded-xl">
-              <h2 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">載入自定義播放清單</h2>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                <input
-                  type="url"
-                  placeholder="輸入播放清單 URL (支援 m3u, m3u8, json, txt)"
-                  value={playlistUrl}
-                  onChange={(e) => setPlaylistUrl(e.target.value)}
-                  className="flex-1 mobile-input rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20"
-                />
-                <button
-                  onClick={handlePlaylistLoad}
-                  disabled={isLoading || !playlistUrl.trim()}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-medium mobile-button rounded-lg transition-colors whitespace-nowrap"
-                >
-                  {isLoading ? '載入中...' : '載入播放'}
-                </button>
-              </div>
-            </div>
 
             {/* 阿布吉節目單 */}
             <div className="glass mobile-section rounded-xl">
@@ -515,6 +688,36 @@ export default function HomePage() {
                   {isLoading ? '載入中...' : '重新載入'}
                 </button>
               </div>
+              
+              {/* 搜索和篩選區域 */}
+              {channels.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="搜索頻道名稱..."
+                      value={channelSearch}
+                      onChange={(e) => setChannelSearch(e.target.value)}
+                      className="flex-1 mobile-input rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20 text-sm"
+                    />
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="bg-white/10 text-white border border-white/20 rounded-lg px-3 py-2 text-sm min-w-0 sm:min-w-[120px]"
+                    >
+                      <option value="">所有分類</option>
+                      {uniqueCategories.map((category) => (
+                        <option key={category} value={category} className="bg-gray-800">
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="text-white/60 text-xs">
+                    顯示 {filteredChannels.length} / {channels.length} 個頻道
+                  </div>
+                </div>
+              )}
               
               {isLoading ? (
                 <div className="text-center py-8 sm:py-12">
@@ -535,6 +738,76 @@ export default function HomePage() {
                 </div>
               )}
             </div>
+
+            {/* 載入自定義播放清單 */}
+            <div className="glass mobile-section rounded-xl">
+              <h2 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">載入自定義播放清單</h2>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                <input
+                  type="url"
+                  placeholder="輸入播放清單 URL (支援 m3u, m3u8, json, txt)"
+                  value={playlistUrl}
+                  onChange={(e) => setPlaylistUrl(e.target.value)}
+                  className="flex-1 mobile-input rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20"
+                />
+                <button
+                  onClick={handlePlaylistLoad}
+                  disabled={isLoading || !playlistUrl.trim()}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-medium mobile-button rounded-lg transition-colors whitespace-nowrap"
+                >
+                  {isLoading ? '載入中...' : '載入播放'}
+                </button>
+              </div>
+              
+              {/* 快速測試按鈕 */}
+              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/20">
+                <p className="text-white/60 text-xs sm:text-sm mb-2">快速測試:</p>
+                <button
+                  onClick={() => {
+                    setPlaylistUrl('http://晓峰.azip.dpdns.org:5008/?type=m3u');
+                    setTimeout(() => handlePlaylistLoad(), 100);
+                  }}
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors"
+                >
+                  測試曉峰的播放清單
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 狀態指示器 */}
+      {!currentChannel && (
+        <div className="fixed bottom-0 left-0 right-0 bg-black/90 text-white p-2 text-xs flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1">
+              <div className={`w-2 h-2 rounded-full ${
+                dbConnectionStatus === 'connected' ? 'bg-green-500' : 
+                dbConnectionStatus === 'failed' ? 'bg-red-500' : 
+                'bg-yellow-500 animate-pulse'
+              }`}></div>
+              <span>
+                {dbConnectionStatus === 'connected' ? '資料庫已連接' : 
+                 dbConnectionStatus === 'failed' ? '資料庫連接失敗 (本地模式)' : 
+                 '連接測試中...'}
+              </span>
+            </div>
+            {channels.length > 0 && (
+              <>
+                <span>
+                  總頻道: {channels.length}
+                  {channelSearch || selectedCategory ? ` | 顯示: ${filteredChannels.length}` : ''}
+                </span>
+                {uniqueCategories.length > 0 && (
+                  <span>分類: {uniqueCategories.length}</span>
+                )}
+              </>
+            )}
+          </div>
+          <div className="text-white/60">
+            阿布吉播放器 v1.0 (最大支援3000台)
           </div>
         </div>
       )}

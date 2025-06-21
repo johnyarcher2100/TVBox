@@ -7,6 +7,7 @@ interface AppState {
   userSession: UserSession | null;
   setUserSession: (session: UserSession | null) => void;
   initializeUserSession: () => void;
+  logout: () => void;
   
   // 頻道相關
   channels: Channel[];
@@ -14,6 +15,7 @@ interface AppState {
   setChannels: (channels: Channel[]) => void;
   setCurrentChannel: (channel: Channel | null) => void;
   updateChannelRating: (channelId: string, newRating: number) => void;
+  deleteChannelsWithLowRating: () => void;
   
   // 播放清單
   playlists: PlaylistData[];
@@ -134,5 +136,25 @@ export const useStore = create<AppState>((set, get) => ({
   setPlayerState: (newState) => set((state) => ({
     ...state,
     ...newState
-  }))
+  })),
+  
+  // 登出功能
+  logout: () => {
+    persistUserSession.setItem(null);
+    set({ 
+      userSession: null, 
+      channels: [], 
+      currentChannel: null,
+      broadcastMessages: []
+    });
+  },
+  
+  // 刪除低評分頻道（僅限等級2以上用戶）
+  deleteChannelsWithLowRating: () => {
+    const { userSession, channels } = get();
+    if (userSession && userSession.user_level >= 2) {
+      const filteredChannels = channels.filter(channel => channel.rating >= 51);
+      set({ channels: filteredChannels });
+    }
+  }
 }));

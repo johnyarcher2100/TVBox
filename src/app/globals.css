@@ -19,32 +19,40 @@
   .channel-grid {
     @apply grid gap-2 p-2 w-full;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    @apply overflow-y-auto overflow-x-hidden max-h-[50vh];
+    @apply overflow-y-auto;
+    /* 限制最多顯示3排高，每排約130px高度 */
+    max-height: 390px;
   }
   
   @media (min-width: 480px) {
     .channel-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      @apply gap-3 p-3 max-h-[55vh];
+      @apply gap-3 p-3;
+      /* 限制最多顯示3排高，每排約140px高度 */
+      max-height: 420px;
     }
   }
   
   @media (min-width: 640px) {
     .channel-grid {
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      @apply gap-4 p-4 max-h-[60vh];
+      @apply gap-4 p-4;
+      /* 限制最多顯示3排高，每排約150px高度 */
+      max-height: 450px;
     }
   }
   
   @media (min-width: 1024px) {
     .channel-grid {
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      @apply max-h-[70vh];
+      /* 限制最多顯示3排高，每排約180px高度 */
+      max-height: 540px;
     }
   }
   
   .channel-container {
-    @apply overflow-y-auto overflow-x-hidden w-full;
+    @apply overflow-y-auto w-full;
+    /* 移除 overflow-x-hidden 避免截掉圖標 */
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   }
@@ -87,51 +95,67 @@
   
   .channel-card {
     @apply relative flex flex-col items-center rounded-lg glass hover:bg-white/20 transition-all cursor-pointer w-full min-w-0;
-    @apply p-2 min-h-[100px] max-w-full;
+    @apply p-2 min-h-[100px] max-w-full overflow-visible;
   }
   
   @media (min-width: 480px) {
     .channel-card {
-      @apply p-2.5 min-h-[110px];
+      @apply p-2.5 min-h-[110px] overflow-visible;
     }
   }
   
   @media (min-width: 640px) {
     .channel-card {
-      @apply p-3 min-h-[120px];
+      @apply p-3 min-h-[120px] overflow-visible;
     }
   }
   
   @media (min-width: 1024px) {
     .channel-card {
-      @apply p-4 min-h-[150px];
+      @apply p-4 min-h-[150px] overflow-visible;
     }
   }
   
   .channel-icon {
-    @apply w-12 h-12 rounded object-cover mb-1.5 flex-shrink-0;
+    @apply w-12 h-12 object-contain mb-1.5 flex-shrink-0;
+    /* 使用 object-contain 確保圖標完整顯示，移除 rounded 避免截掉 */
+    position: relative;
+    z-index: 1;
+    background-color: transparent;
   }
   
   @media (min-width: 480px) {
     .channel-icon {
-      @apply w-14 h-14 mb-2;
+      @apply w-14 h-14 object-contain mb-2;
+      /* 確保圖標完整顯示 */
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
     }
   }
   
   @media (min-width: 640px) {
     .channel-icon {
-      @apply w-16 h-16 mb-2;
+      @apply w-16 h-16 object-contain mb-2;
+      /* 確保圖標完整顯示 */
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
     }
   }
   
   @media (min-width: 1024px) {
     .channel-icon {
-      @apply w-20 h-20;
+      @apply w-20 h-20 object-contain;
+      /* 確保圖標完整顯示 */
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
     }
   }
   
   .channel-name {
-    @apply text-xs font-medium text-center text-white line-clamp-2 leading-tight w-full overflow-hidden;
+    @apply text-xs font-medium text-center text-white line-clamp-2 leading-tight w-full;
   }
   
   @media (min-width: 640px) {
@@ -215,7 +239,8 @@
   }
   
   .no-horizontal-scroll {
-    @apply overflow-x-hidden w-full max-w-full;
+    @apply w-full max-w-full;
+    /* 移除 overflow-x-hidden 避免截掉圖標 */
   }
 }
 
@@ -224,4 +249,55 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* 播放器控制面板樣式 */
+.player-controls {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.control-button {
+  @apply transition-all duration-200 ease-in-out;
+  @apply active:scale-95;
+}
+
+.control-button:hover {
+  @apply transform scale-105;
+}
+
+.rating-button {
+  @apply transition-all duration-200 ease-in-out;
+  @apply active:scale-90;
+}
+
+.rating-button:hover {
+  @apply transform scale-110;
+}
+
+/* 漸層背景動畫 */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-bg {
+  background: linear-gradient(-45deg, rgba(0,0,0,0.9), rgba(0,0,0,0.7), rgba(0,0,0,0.9));
+  background-size: 400% 400%;
+  animation: gradientShift 10s ease infinite;
+}
+
+/* 玻璃效果增強 */
+.glass-enhanced {
+  @apply backdrop-blur-xl bg-white/5 border border-white/10;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }

@@ -202,4 +202,114 @@ export class CORSHandler {
       }
     }
   }
+
+  // CORS 代理服務列表
+  private static corsProxies = [
+    'https://api.allorigins.win/raw?url=',
+    'https://cors-anywhere.herokuapp.com/',
+    'https://thingproxy.freeboard.io/fetch/'
+  ];
+
+  // 嘗試直接獲取資源
+  static async fetchDirect(url: string): Promise<Response> {
+    console.log('嘗試直接獲取:', url);
+    
+    // 處理包含中文字符的 URL
+    const encodedUrl = encodeURI(url);
+    
+    return fetch(encodedUrl, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'text/plain, application/vnd.apple.mpegurl, audio/mpegurl, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+  }
+
+  // 使用 CORS 代理獲取資源
+  static async fetchWithProxy(url: string, proxyIndex = 0): Promise<Response> {
+    if (proxyIndex >= this.corsProxies.length) {
+      throw new Error('所有 CORS 代理都無法訪問此資源');
+    }
+
+    const proxy = this.corsProxies[proxyIndex];
+    const encodedUrl = encodeURIComponent(url);
+    const proxyUrl = proxy + encodedUrl;
+    
+    console.log(`嘗試使用 CORS 代理 ${proxyIndex + 1}:`, proxyUrl);
+
+    try {
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/plain, application/vnd.apple.mpegurl, audio/mpegurl, */*'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`代理回應錯誤: ${response.status}`);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error(`CORS 代理 ${proxyIndex + 1} 失敗:`, error);
+      return this.fetchWithProxy(url, proxyIndex + 1);
+    }
+  }
+
+  // 智能獲取資源（先直接嘗試，失敗則使用代理）
+  static async smartFetch(url: string): Promise<Response> {
+    try {
+      // 先嘗試直接獲取
+      const response = await this.fetchDirect(url);
+      
+      if (response.ok) {
+        console.log('直接獲取成功');
+        return response;
+      }
+      
+      throw new Error(`直接獲取失敗: ${response.status}`);
+    } catch (error) {
+      console.log('直接獲取失敗，嘗試使用 CORS 代理');
+      
+      // 如果直接獲取失敗，嘗試使用 CORS 代理
+      try {
+        return await this.fetchWithProxy(url);
+      } catch (proxyError) {
+        console.error('所有獲取方式都失敗:', proxyError);
+        throw new Error(`無法獲取資源: ${url}\n直接獲取失敗: ${error}\n代理獲取失敗: ${proxyError}`);
+      }
+    }
+  }
+
+  // 檢測是否需要使用 CORS 代理
+  static needsCorsProxy(url: string): boolean {
+    try {
+      const urlObj = new URL(url);
+      const currentOrigin = window.location.origin;
+      const targetOrigin = urlObj.origin;
+      
+      // 如果是同源請求，不需要代理
+      if (targetOrigin === currentOrigin) {
+        return false;
+      }
+      
+      // 檢查是否是常見的需要代理的域名
+      const needsProxyDomains = [
+        'localhost',
+        '127.0.0.1',
+        '192.168.',
+        '10.',
+        '172.'
+      ];
+      
+      return needsProxyDomains.some(domain => 
+        urlObj.hostname.includes(domain) || 
+        urlObj.hostname.startsWith(domain)
+      );
+    } catch {
+      return true; // 如果 URL 無效，嘗試使用代理
+    }
+  }
 }
