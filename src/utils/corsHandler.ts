@@ -206,25 +206,54 @@ export class CORSHandler {
   // CORS 代理服務列表
   private static corsProxies = [
     'https://api.allorigins.win/raw?url=',
+    'https://api.codetabs.com/v1/proxy?quest=',
+    'https://corsproxy.io/?',
+    'https://thingproxy.freeboard.io/fetch/',
     'https://cors-anywhere.herokuapp.com/',
-    'https://thingproxy.freeboard.io/fetch/'
+    'https://proxy.cors.sh/',
+    'https://cors.eu.org/',
+    'https://yacdn.org/proxy/',
+    'https://cors.bridged.cc/',
+    'https://crossorigin.me/'
   ];
 
   // 嘗試直接獲取資源
   static async fetchDirect(url: string): Promise<Response> {
     console.log('嘗試直接獲取:', url);
     
-    // 處理包含中文字符的 URL
-    const encodedUrl = encodeURI(url);
+    // 處理包含中文字符的 URL - 使用多種編碼方式
+    const encodingMethods = [
+      url, // 原始 URL
+      encodeURI(url), // 標準 URI 編碼
+      url.replace(/[\u4e00-\u9fff]/g, (char) => encodeURIComponent(char)), // 只編碼中文字符
+      encodeURIComponent(url) // 完全編碼
+    ];
     
-    return fetch(encodedUrl, {
-      method: 'GET',
-      mode: 'cors',
-      headers: {
-        'Accept': 'text/plain, application/vnd.apple.mpegurl, audio/mpegurl, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    // 嘗試不同的編碼方式
+    for (const encodedUrl of encodingMethods) {
+      try {
+        console.log('嘗試編碼:', encodedUrl);
+        const response = await fetch(encodedUrl, {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'text/plain, application/vnd.apple.mpegurl, audio/mpegurl, */*',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        });
+        
+        if (response.ok) {
+          console.log('編碼成功:', encodedUrl);
+          return response;
+        }
+      } catch (error) {
+        console.log('編碼失敗:', encodedUrl, error);
+        continue;
       }
-    });
+    }
+    
+    // 如果所有編碼都失敗，拋出錯誤
+    throw new Error('所有編碼方式都無法訪問此 URL');
   }
 
   // 使用 CORS 代理獲取資源
@@ -234,28 +263,48 @@ export class CORSHandler {
     }
 
     const proxy = this.corsProxies[proxyIndex];
-    const encodedUrl = encodeURIComponent(url);
-    const proxyUrl = proxy + encodedUrl;
     
-    console.log(`嘗試使用 CORS 代理 ${proxyIndex + 1}:`, proxyUrl);
+    // 為不同的代理服務使用不同的編碼策略
+    const encodingMethods = [
+      encodeURIComponent(url), // 完全編碼
+      url.replace(/[\u4e00-\u9fff]/g, (char) => encodeURIComponent(char)), // 只編碼中文字符
+      encodeURI(url), // 標準 URI 編碼
+      url // 原始 URL
+    ];
+    
+    for (const encodedUrl of encodingMethods) {
+      const proxyUrl = proxy + encodedUrl;
+      console.log(`嘗試使用 CORS 代理 ${proxyIndex + 1} (編碼: ${encodedUrl.substring(0, 50)}...):`, proxyUrl);
 
-    try {
-      const response = await fetch(proxyUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'text/plain, application/vnd.apple.mpegurl, audio/mpegurl, */*'
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超時
+        
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'text/plain, application/vnd.apple.mpegurl, audio/mpegurl, */*'
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log(`CORS 代理 ${proxyIndex + 1} 成功`);
+          return response;
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`代理回應錯誤: ${response.status}`);
+        
+        console.log(`代理 ${proxyIndex + 1} 回應狀態: ${response.status}`);
+      } catch (error) {
+        console.log(`代理 ${proxyIndex + 1} 編碼失敗:`, error);
+        continue;
       }
-      
-      return response;
-    } catch (error) {
-      console.error(`CORS 代理 ${proxyIndex + 1} 失敗:`, error);
-      return this.fetchWithProxy(url, proxyIndex + 1);
     }
+
+    // 如果當前代理的所有編碼都失敗，嘗試下一個代理
+    console.error(`CORS 代理 ${proxyIndex + 1} 所有編碼都失敗，嘗試下一個代理`);
+    return this.fetchWithProxy(url, proxyIndex + 1);
   }
 
   // 智能獲取資源（先直接嘗試，失敗則使用代理）

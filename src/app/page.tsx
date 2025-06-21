@@ -10,6 +10,7 @@ import { ModernPlayer } from '@/components/players/ModernPlayer';
 import { RatingSystem } from '@/utils/ratingSystem';
 import { testDatabaseConnection } from '@/lib/supabase';
 import { Channel, PlayerState, BroadcastMessage } from '@/types';
+import '@/utils/quickTest'; // 載入快速測試工具
 
 export default function HomePage() {
   const router = useRouter();
@@ -48,6 +49,7 @@ export default function HomePage() {
   const [dbConnectionStatus, setDbConnectionStatus] = useState<'testing' | 'connected' | 'failed' | null>(null);
   const [channelSearch, setChannelSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [m3uTextInput, setM3uTextInput] = useState('');
 
   // 客戶端初始化
   useEffect(() => {
@@ -214,6 +216,47 @@ export default function HomePage() {
       console.error('播放清單載入失敗:', error);
       const errorMessage = error instanceof Error ? error.message : '未知錯誤';
       alert(`❌ 播放清單載入失敗：\n${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleM3uTextLoad = async () => {
+    if (!m3uTextInput.trim()) return;
+    
+    try {
+      setIsLoading(true);
+      console.log('開始解析 M3U 文本內容');
+      
+      // 使用 PlaylistParser 的 parseM3U 方法直接解析文本
+      const parsedChannels = PlaylistParser.parseM3U(m3uTextInput);
+      
+      if (parsedChannels.length > 0) {
+        // 將新頻道添加到現有頻道中（而不是替換）
+        const updatedChannels = [...channels, ...parsedChannels];
+        setChannels(updatedChannels);
+        
+        // 存儲到資料庫
+        if (dbConnectionStatus === 'connected') {
+          try {
+            await DatabaseOperations.saveChannels(updatedChannels);
+            console.log(`成功存儲 ${updatedChannels.length} 個頻道到資料庫`);
+          } catch (dbError) {
+            console.error('存儲頻道到資料庫失敗:', dbError);
+          }
+        }
+        
+        alert(`✅ 成功添加 ${parsedChannels.length} 個頻道！\n總共: ${updatedChannels.length} 個頻道\n${dbConnectionStatus === 'connected' ? '頻道已保存到資料庫。' : '本地模式：頻道僅在當前會話中可用。'}`);
+        
+        // 清空輸入框
+        setM3uTextInput('');
+      } else {
+        alert('❌ M3U 文本解析失敗或無有效頻道');
+      }
+    } catch (error) {
+      console.error('M3U 文本解析失敗:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+      alert(`❌ M3U 文本解析失敗：\n${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -478,7 +521,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen no-horizontal-scroll">
+    <div className="min-h-screen no-horizontal-scroll overflow-y-auto">
       {/* 播放器模式 */}
       {currentChannel ? (
         <div className="h-screen flex bg-black relative">
@@ -633,7 +676,7 @@ export default function HomePage() {
         </div>
       ) : (
         /* 首頁模式 */
-        <div className="p-2 sm:p-4 no-horizontal-scroll">
+        <div className="p-2 sm:p-4 pb-20">
           <div className="max-w-7xl mx-auto w-full">
             {/* 標題區域 */}
             <header className="text-center mb-4 sm:mb-6">
@@ -772,6 +815,75 @@ export default function HomePage() {
                 >
                   測試曉峰的播放清單
                 </button>
+              </div>
+            </div>
+
+            {/* M3U 文本直接輸入 */}
+            <div className="glass mobile-section rounded-xl">
+              <h2 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">直接貼上 M3U 內容</h2>
+              <p className="text-white/60 text-xs sm:text-sm mb-3">
+                直接貼上 M3U 格式的內容，系統會自動解析並添加頻道到現有清單中
+              </p>
+              
+              <div className="space-y-3">
+                <textarea
+                  placeholder="貼上 M3U 內容，例如：&#10;#EXTM3U&#10;#EXTINF:-1 tvg-name=&quot;CCTV1&quot; tvg-logo=&quot;logo.png&quot; group-title=&quot;央視頻道&quot;,CCTV-1&#10;http://example.com/stream.m3u8&#10;#EXTINF:-1 tvg-name=&quot;CCTV2&quot; group-title=&quot;央視頻道&quot;,CCTV-2&#10;http://example.com/stream2.m3u8"
+                  value={m3uTextInput}
+                  onChange={(e) => setM3uTextInput(e.target.value)}
+                  className="w-full h-32 sm:h-40 mobile-input rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20 resize-none font-mono text-xs sm:text-sm"
+                  style={{ lineHeight: '1.4' }}
+                />
+                
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                  <div className="flex-1">
+                    <div className="text-white/60 text-xs">
+                      {m3uTextInput.trim() ? 
+                        `已輸入 ${m3uTextInput.split('\n').length} 行內容` : 
+                        '支援標準 M3U/M3U8 格式'
+                      }
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setM3uTextInput('')}
+                      disabled={isLoading || !m3uTextInput.trim()}
+                      className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 text-white px-3 py-2 rounded-lg text-xs sm:text-sm transition-colors"
+                    >
+                      清空
+                    </button>
+                    
+                    <button
+                      onClick={handleM3uTextLoad}
+                      disabled={isLoading || !m3uTextInput.trim()}
+                      className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-medium px-4 py-2 rounded-lg text-xs sm:text-sm transition-colors whitespace-nowrap"
+                    >
+                      {isLoading ? '解析中...' : '解析並添加'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* M3U 格式說明 */}
+              <div className="mt-4 pt-4 border-t border-white/20">
+                <details className="text-white/60 text-xs">
+                  <summary className="cursor-pointer hover:text-white/80 font-medium mb-2">
+                    📋 M3U 格式說明 (點擊展開)
+                  </summary>
+                  <div className="bg-black/30 p-3 rounded-lg space-y-2 font-mono">
+                    <div className="text-yellow-400"># M3U 格式範例:</div>
+                    <div className="text-green-400">#EXTM3U x-tvg-url="epg.xml"</div>
+                    <div className="text-blue-400">#EXTINF:-1 tvg-name="頻道名" tvg-logo="圖標URL" group-title="分類",顯示名稱</div>
+                    <div className="text-white">http://stream-url.com/channel.m3u8</div>
+                    <div className="mt-2 text-white/60 text-xs">
+                      • 每個頻道需要 #EXTINF 標籤和串流 URL<br/>
+                      • tvg-name: 頻道識別名稱<br/>
+                      • tvg-logo: 頻道圖標 URL<br/>
+                      • group-title: 頻道分類<br/>
+                      • 支援 HTTP/HTTPS 串流連結
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
           </div>

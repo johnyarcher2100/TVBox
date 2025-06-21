@@ -117,7 +117,8 @@
   }
   
   .channel-icon {
-    @apply w-12 h-12 object-contain mb-1.5 flex-shrink-0;
+    @apply w-12 object-contain mb-1.5 flex-shrink-0;
+    height: 60%; /* 調整高度為 60% */
     /* 使用 object-contain 確保圖標完整顯示，移除 rounded 避免截掉 */
     position: relative;
     z-index: 1;
@@ -126,7 +127,8 @@
   
   @media (min-width: 480px) {
     .channel-icon {
-      @apply w-14 h-14 object-contain mb-2;
+      @apply w-14 object-contain mb-2;
+      height: 60%; /* 調整高度為 60% */
       /* 確保圖標完整顯示 */
       position: relative;
       z-index: 1;
@@ -136,7 +138,8 @@
   
   @media (min-width: 640px) {
     .channel-icon {
-      @apply w-16 h-16 object-contain mb-2;
+      @apply w-16 object-contain mb-2;
+      height: 60%; /* 調整高度為 60% */
       /* 確保圖標完整顯示 */
       position: relative;
       z-index: 1;
@@ -146,7 +149,8 @@
   
   @media (min-width: 1024px) {
     .channel-icon {
-      @apply w-20 h-20 object-contain;
+      @apply w-20 object-contain;
+      height: 60%; /* 調整高度為 60% */
       /* 確保圖標完整顯示 */
       position: relative;
       z-index: 1;
@@ -239,8 +243,8 @@
   }
   
   .no-horizontal-scroll {
-    @apply w-full max-w-full;
-    /* 移除 overflow-x-hidden 避免截掉圖標 */
+    @apply w-full max-w-full overflow-x-hidden;
+    /* 確保允許垂直滾動 */
   }
 }
 

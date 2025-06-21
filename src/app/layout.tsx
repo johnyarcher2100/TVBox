@@ -29,7 +29,7 @@ export default function RootLayout({
         <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
         <script src="https://cdn.jsdelivr.net/npm/flv.js@latest"></script>
       </head>
-      <body className={`${inter.className} bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 min-h-screen overflow-hidden`}>
+      <body className={`${inter.className} bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 min-h-screen`}>
         <div className="relative min-h-screen">
           {children}
         </div>
